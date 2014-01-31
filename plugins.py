@@ -9,6 +9,7 @@ class Plugin:
     """ A class that can communicate with other Plugins through
         plugin manager"""
     def __init__(self, manager):
+        """Creates plugin object."""
         self.pname = "Plugin"
         self.manager = manager
         self.dependencies = []
@@ -20,11 +21,16 @@ class Plugin:
         self.responded = False
         
     def addResponse(self, signal, func):
+        """Adds response to signal.
+        Args
+            signal: signal to respond to.
+            func: function to respond with."""
         self.responses[signal] = func
         self.respondAfter[signal] = []
         self.respondBefore[signal] = [] 
 
     def __str__(self):
+        """Return plugin name."""
         return self.pname
         
 class PluginManager:
@@ -36,6 +42,8 @@ class PluginManager:
         self.raiseSignal("started")
         
     def getPluginsList(self):
+        """Gets plugins list from plugins.list if present, otherwise
+        calls getDefaultPluginsList"""
         pluginsListFile = join(SOURCE_DIR, "plugins.list")
         if not isfile(pluginsListFile):
             warnings.warn("plugins.list not found, loading default values", 
@@ -47,9 +55,11 @@ class PluginManager:
                 self.pluginsList = [p for p in f.read().splitlines() if p]
         
     def getDefaultPluginsList(self):
-        return ["main_arkocal", "dirTree_arkocal", "dirFrame_arkocal"]
+        """Returns default list of plugins. Called if getPluginsList fails."""
+        return ["settings","guiManager","dirTree"]
         
     def loadPlugins(self):
+        """Imports modules containing the plug-ins."""
         self.plugins = []
         self.pluginNames = {}
         pluginId = 0
@@ -67,11 +77,14 @@ class PluginManager:
                 warnings.warn("Failed to load plug-in %s" %pluginName, Warning)
             
     def raiseSignal(self, signal, *args, **kwargs):
+        """Raises signal with given args."""
         raiseTo = self.getPluginsToRaiseSignal(signal)
         for target in raiseTo:
             target.responses[signal](signal, *args, **kwargs)
         
     def getPluginsToRaiseSignal(self, signal):
+        """Returns a list of plug-ins in the order they can respond
+        to signal."""
         result = [] #TODO check if it is possible
         # O(n*m) get plugins that respond to signal
         candidates = [c for c in self.plugins if signal in c.responses.keys()]

@@ -15,34 +15,42 @@ import settings
 import plugins
 
 class LeftPaneWidthSetting(settings.Setting):
-
+    """Setting for left pane width."""
+    
     def __init__(self):
+        """Creates a LeftPaneWidthSetting object."""
         settings.Setting.__init__(self)
         self.setToDefault()
 
     def isValidValue(self, value):
+        """Returns whether value is a valid width."""
         try:
-            return (0 < value < 60000) and (type(value) is int)
+            return (type(value) is int) and (0 < value < 60000)
         except:
             return False
             
     def setToDefault(self):
+        """ Sets left pane width to default."""
         self.set(240)
 
 class WindowSizeSetting(settings.Setting):
+    """Setting for window size. Value is tuple (width, height)"""
 
     def __init__(self):
+        """Creates a WindowSizeSetting object."""
         settings.Setting.__init__(self)
         self.setToDefault()
 
     def isValidValue(self, value):
-        #try:
+        """Returns if value is a valid (width, height) tuple"""
+        try:
             return ((0 < value[0] < 60000) and
                     (0 < value[1] < 60000))
-        #except:
-         #   return False
+        except:
+           return False
             
     def setToDefault(self):
+        """ Sets window size to default."""
         self.set((640,480))
 
 class guiManager(plugins.Plugin):
