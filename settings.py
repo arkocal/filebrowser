@@ -72,8 +72,8 @@ class BooleanSetting(Setting):
             raise ValueError("Invalid value {}".format(value))"""
         
 class Settings(plugins.Plugin):
-     """The settings plug-in load the settings from disk, sends 
-     to other plug-ins or changes on request."""
+    """The settings plug-in load the settings from disk, sends 
+    to other plug-ins or changes on request."""
 
     def __init__(self, manager):
         """Creates Settings plug-in."""

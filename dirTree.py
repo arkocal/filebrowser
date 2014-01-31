@@ -8,10 +8,15 @@ import plugins
 
 
 def isHidden(path):
+    """Returns whether file at the given path is hidden."""
     (_, fname) = os.path.split(path)
     return (fname[0]=="." or fname[-1]=="~")
 
 def breakPath(path):
+    """ Breaks path into an array. 
+    Example: path= /home/anon/Documents returns:
+    ["home", "anon", "Documents"].
+    This is different from path.split("/") as it is cross platform"""    
     #TODO test on windows
     (head, tail) = os.path.split(path)
     if len(head) == 1:
@@ -20,27 +25,35 @@ def breakPath(path):
         return breakPath(head) + [tail]
 
 class DirRowHeightSetting(settings.Setting):
+    "Setting for height of DirRow's"""
 
     def __init__(self):
+        "Creates DirRowHeightSetting object."""
         settings.Setting.__init__(self)
         self.setToDefault()
 
     def isValidValue(self, value):
+        """Returns whether value is a valid height."""
         try:
-            return (0 < value < 60000) and (type(value) is int)
+            return (type(value) is int) and (0 < value < 60000) 
         except:
             return False
             
     def setToDefault(self):
+        """Sets DirRow's height to the default value."""
         self.set(60)
 
 class StartPathSetting(settings.DirPathSetting):
+    """Setting for starting path. This is a normal DirPathSetting
+    with default value of users home directory."""
 
     def __init__(self):
+        """Creates a StartPathSetting object."""
         settings.DirPathSetting.__init__(self)
         self.setToDefault()
         
     def setToDefault(self):
+        """Sets starting path to home directory of the user."""
         self.value = expanduser("~")
 
 """class DirRowNormalColorSetting(settings.GdkColorSetting):
@@ -54,8 +67,15 @@ class DirNowActiveColorSetting(settings.GdkColorSetting):
         settings.GdkColorSetting.__init__(self, "#d0d0d0")"""
 
 class DirRow(Gtk.ListBoxRow):
+    """ListBoxRow for showing directories and toggling children on and off"""
 
     def __init__(self, path, plugin, depth):
+        """Creates DirRowObject
+        Args
+            path: Full path to directory DirRow shows.
+            plugin: dirTree plugin DirRow belongs to. It is used for
+            getting settings.
+            depth: Relative indentation depth of directory"""
         Gtk.ListBoxRow.__init__(self)
         self.isSelected = False
         self.isToggledOn = False
@@ -87,6 +107,7 @@ class DirRow(Gtk.ListBoxRow):
         self.show_all()
 
     def deselect(self):
+        """Deselects the row and reverts colors to normal."""
         normalColor = Gdk.Color.parse("#d7dad7")[1]
         activeColor = Gdk.Color.parse("#d0d0d0")[1]
         self.modify_bg(Gtk.StateType.NORMAL, normalColor)
@@ -95,12 +116,14 @@ class DirRow(Gtk.ListBoxRow):
         self.set_state(Gtk.StateType.NORMAL)      
 
     def select(self):
+        """Selects row and changes its color."""
         selectedColor = Gdk.Color.parse("#888a85")[1]
         self.modify_bg(Gtk.StateType.NORMAL, selectedColor)
         self.modify_bg(Gtk.StateType.ACTIVE, selectedColor)
         self.modify_bg(Gtk.StateType.SELECTED, selectedColor)
 
     def toggle(self):
+        """Toggles row."""
         if self.isToggledOn:
             self.isToggledOn = False
             self.toggleOff()
@@ -109,6 +132,9 @@ class DirRow(Gtk.ListBoxRow):
             self.toggleOn()  
             
     def toggleOn(self):
+        """Toggles on the row. This doesn't effect isToggledOn property,
+        but only handles the gui changes. Children of the row will be
+        added if not already."""
         if not self.isPopulated:
             self.populate()
         index = self.get_index() + 1            
@@ -120,12 +146,17 @@ class DirRow(Gtk.ListBoxRow):
         return index-1          
 
     def toggleOff(self):
+        """Toggles on the row. This doesn't effect isToggledOn property,
+        but only handles the gui changes. Children of the row will be
+        added if not already."""    
         for child in self.children:
             self.plugin.widget.remove(child)
             child.toggleOff()
         #self.children = []
         
     def populate(self):
+        """Adds children to row. In order to update the row, use the
+        repopulate function. """
         showHidden = self.plugin.settings["show-hidden"].value
         paths = [join(self.path, path) for path in os.listdir(self.path)]
         paths.sort()
@@ -139,8 +170,13 @@ class DirRow(Gtk.ListBoxRow):
         self.isPopulated = True      
         
 class DirTree(plugins.Plugin):
+    """dirTree provides a gui in the left pane to browser directories.
+    One can toggle the subdirectories of a directory by space key or 
+    a single click. Enter key or double click selects the directory 
+    and raises "change-dir" signal."""
 
     def __init__(self, manager):
+        """Creates a DirTree object."""
         plugins.Plugin.__init__(self, manager)
         self.pname = "dirTree"
         self.dependencies.append("settings")        
@@ -149,6 +185,7 @@ class DirTree(plugins.Plugin):
         self.respondAfter["started"].append("settings")
         
     def onStart(self, signal, *args, **kwargs):
+        """Creates the tree with start-path setting as root."""
         self.manager.raiseSignal("request-settings", widget=self)    
         self.widget = Gtk.ListBox()
         self.widget.set_selection_mode(Gtk.SelectionMode.SINGLE)
@@ -159,34 +196,31 @@ class DirTree(plugins.Plugin):
         if "start-path" not in self.settings.keys():
             self.manager.raiseSignal("set-new-setting", name="start-path",
                                      setting = StartPathSetting())
+        if "show-hidden " not in self.settings.keys():
+            self.manager.raiseSignal("set-new-setting", name="show-hidden",
+                                     setting = settings.BooleanSetting())
         startpath = self.settings["start-path"].value
         self.root = startpath
         row = DirRow(path=self.root, plugin=self, depth=0)
         self.widget.add(row)
         row.toggle()
-        """if "show-hidden" not in self.settings.keys():
-            self.manager.raiseSignal("set-new-setting", name="show-hidden",
-                                     setting = settings.BooleanSetting())
-        showHidden = self.settings["show-hidden"].value
-        paths = [join(startpath, path) for path in os.listdir(startpath)]
-        paths.sort()
-        dirs = filter(os.path.isdir, paths)
-        if not showHidden:
-            dirs = filter(lambda f: not isHidden(f) , dirs)
-        for path in dirs:
-            row = DirRow(path=os.path.join(startpath, path), plugin=self,
-                         depth=1)
-            self.widget.add(row)"""
         self.widget.show_all()  
         
     def onMouseEvent(self, widget, event):
+        """Responds to button press events.
+        Single click: toggle directory
+        Double click: select directory"""
         row = self.widget.get_row_at_y(event.y)
         if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
             self.select(row)
         elif event.type == Gdk.EventType.BUTTON_PRESS:
             row.toggle()
      
-    def onKeyEvent(self, row, event): 
+    def onKeyEvent(self, row, event):
+        """Responds to key press events.
+        space: toggle directory.
+        return: select directory.
+        """
         keyname = Gdk.keyval_name(event.keyval)
         if keyname == "Return":
             self.select(row)
@@ -194,6 +228,7 @@ class DirTree(plugins.Plugin):
             row.toggle()
 
     def onChangeDir(self, signal, *args, **kwargs):
+        """Selects kwargs[“newPath”] if it is in dirTree."""
         newPath = kwargs["newPath"]
         if self.selectedRow is not None:
             if self.selectedRow.path == newPath: #nothing to do
@@ -227,6 +262,7 @@ class DirTree(plugins.Plugin):
             self.selected = targetRow
             
     def select(self, row):
+        """Selects row and deselects the old one."""
         if self.selectedRow is not None:
             self.selectedRow.deselect()
         self.selectedRow = row
