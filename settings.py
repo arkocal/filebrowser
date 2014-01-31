@@ -32,7 +32,7 @@ class DirPathSetting(Setting):
 class BooleanSetting(Setting):
 
     def __init__(self):
-        Setting.__init__(False)
+        Setting.__init__(self, False)
         self.value = False
         
     def isValidValue(self, value):
@@ -81,13 +81,13 @@ class Settings(plugins.Plugin):
             self.settings = {} 
         
     def onRequestSettings(self, signal, *args, **kwargs):
-        """Sets kwargs[“widget”].settings to self."""
+        """Sets kwargs["widget"].settings to self."""
         widget = kwargs["widget"]
         widget.settings = self.settings
 
     def onSetSetting(self, signal, *args, **kwargs):
-        """Sets kwargs[“setting”] to kwargs[“newValue”]
-        if kwargs[“newValue”] is valid. Saves changes to disk."""
+        """Sets kwargs["setting"] to kwargs["newValue"]
+        if kwargs["newValue"] is valid. Saves changes to disk."""
         setting = kwargs["setting"]
         newValue = kwargs["newValue"]
         setting.set(newValue)
@@ -100,7 +100,7 @@ class Settings(plugins.Plugin):
         self.save()
         
     def onSetNewSetting(self, signal, *args, **kwargs):
-        """Adds kwargs[“setting”], which is an instance of Setting,
+        """Adds kwargs["setting"], which is an instance of Setting,
         to settings and saves changes to disk. This can also be used
         to override an old setting with a new Setting object."""
         name = kwargs["name"]
