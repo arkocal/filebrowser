@@ -90,6 +90,10 @@ class DirRow(Gtk.ListBoxRow):
             self.plugin.manager.raiseSignal("set-new-setting",
                                           setting = DirRowHeightSetting(),
                                           name="dir-row-height")
+        if "show-hidden" not in self.plugin.settings.keys():
+            self.plugin.manager.raiseSignal("set-new-setting",
+                                            setting=settings.BooleanSetting(),
+                                            name="show-hidden")
         height = self.plugin.settings["dir-row-height"].value
         self.set_size_request(-1, height)
         normalColor = Gdk.Color.parse("#d7dad7")[1]
