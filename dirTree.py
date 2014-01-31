@@ -59,6 +59,7 @@ class DirRow(Gtk.ListBoxRow):
         Gtk.ListBoxRow.__init__(self)
         self.isSelected = False
         self.isToggledOn = False
+        self.isPopulated = False
         self.children = []
         self.plugin = plugin
         self.path = path
@@ -101,12 +102,30 @@ class DirRow(Gtk.ListBoxRow):
 
     def toggle(self):
         if self.isToggledOn:
-            self.toggleOf()
+            self.isToggledOn = False
+            self.toggleOff()
         else:
-            self.toggleOn()
+            self.isToggledOn = True
+            self.toggleOn()  
             
     def toggleOn(self):
-        self.isToggledOn = True
+        if not self.isPopulated:
+            self.populate()
+        index = self.get_index() + 1            
+        for child in self.children:
+            self.plugin.widget.insert(child, index)
+            if child.isToggledOn:
+                index = child.toggleOn()
+            index += 1
+        return index-1          
+
+    def toggleOff(self):
+        for child in self.children:
+            self.plugin.widget.remove(child)
+            child.toggleOff()
+        #self.children = []
+        
+    def populate(self):
         showHidden = self.plugin.settings["show-hidden"].value
         paths = [join(self.path, path) for path in os.listdir(self.path)]
         paths.sort()
@@ -117,16 +136,7 @@ class DirRow(Gtk.ListBoxRow):
             row = DirRow(path=os.path.join(self.path, path), 
                          plugin=self.plugin, depth=self.depth+1)
             self.children.append(row)
-        index = self.get_index() + 1
-        for child in self.children:
-            self.plugin.widget.insert(child, index)
-            index += 1
-
-    def toggleOf(self):
-        self.isToggledOn = False
-        for child in self.children:
-            self.plugin.widget.remove(child)
-        self.children = []
+        self.isPopulated = True      
         
 class DirTree(plugins.Plugin):
 
@@ -151,7 +161,10 @@ class DirTree(plugins.Plugin):
                                      setting = StartPathSetting())
         startpath = self.settings["start-path"].value
         self.root = startpath
-        if "show-hidden" not in self.settings.keys():
+        row = DirRow(path=self.root, plugin=self, depth=0)
+        self.widget.add(row)
+        row.toggle()
+        """if "show-hidden" not in self.settings.keys():
             self.manager.raiseSignal("set-new-setting", name="show-hidden",
                                      setting = settings.BooleanSetting())
         showHidden = self.settings["show-hidden"].value
@@ -163,7 +176,7 @@ class DirTree(plugins.Plugin):
         for path in dirs:
             row = DirRow(path=os.path.join(startpath, path), plugin=self,
                          depth=1)
-            self.widget.add(row)
+            self.widget.add(row)"""
         self.widget.show_all()  
         
     def onMouseEvent(self, widget, event):
