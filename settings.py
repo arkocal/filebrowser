@@ -6,39 +6,50 @@ from gi.repository import Gdk
 SOURCE_DIR = dirname(abspath(__file__))
 
 class Setting(object):
+    """Basic class for settings"""
     
     def __init__(self, value=None):
+        """Assigns value if not None, does nothing otherwise."""
         if value is not None:
             self.set(value)
         
     def isValidValue(self, value):
+        """Returns wheter value is valid."""
         return True
 
     def set(self, value):
+        """Sets value if it is valid."""
         if self.isValidValue(value):
             self.value = value
         else:
             raise ValueError("Invalid value {}".format(value))
             
     def setDefault(self):
+        """Sets value to its default."""
         pass
 
 
 class DirPathSetting(Setting):
-    
+    """Setting class for directory paths"""  
+      
     def isValidValue(self, value):
+        """Returns whether the path is a directory."""
         return os.path.isdir(value)
         
 class BooleanSetting(Setting):
+    """Setting class for boolean properities defaulting False"""
 
     def __init__(self):
+        """Creates Setting object with value False."""
         Setting.__init__(False)
         self.value = False
         
     def isValidValue(self, value):
+        """Returns True if value is boolean, false otherwise."""
         return type(value) is bool
         
     def setDefault(self):
+        """Sets value to false."""
         self.value = False
 
 """class GdkColorSetting(object):
@@ -61,8 +72,11 @@ class BooleanSetting(Setting):
             raise ValueError("Invalid value {}".format(value))"""
         
 class Settings(plugins.Plugin):
+     """The settings plug-in load the settings from disk, sends 
+     to other plug-ins or changes on request."""
 
     def __init__(self, manager):
+        """Creates Settings plug-in."""
         plugins.Plugin.__init__(self, manager)
         self.pname = "settings"
         self.addResponse("started", self.onStart)
@@ -73,6 +87,7 @@ class Settings(plugins.Plugin):
         self.addResponse("set-new-setting", self.onSetNewSetting)
         
     def onStart(self, signal, *args, **kwargs):
+        """Loads settings from disk."""
         settingsPath = join(SOURCE_DIR, "settings")
         try:
             with open(settingsPath, "rb") as f:
