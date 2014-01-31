@@ -11,6 +11,14 @@ def isHidden(path):
     (_, fname) = os.path.split(path)
     return (fname[0]=="." or fname[-1]=="~")
 
+def breakPath(path):
+    #TODO test on windows
+    (head, tail) = os.path.split(path)
+    if len(head) == 1:
+        return [tail]
+    else:
+        return breakPath(head) + [tail]
+
 class DirRowHeightSetting(settings.Setting):
 
     def __init__(self):
@@ -127,6 +135,7 @@ class DirTree(plugins.Plugin):
         self.pname = "dirTree"
         self.dependencies.append("settings")        
         self.addResponse("started", self.onStart)
+        self.addResponse("change-dir", self.onChangeDir)
         self.respondAfter["started"].append("settings")
         
     def onStart(self, signal, *args, **kwargs):
@@ -141,6 +150,7 @@ class DirTree(plugins.Plugin):
             self.manager.raiseSignal("set-new-setting", name="start-path",
                                      setting = StartPathSetting())
         startpath = self.settings["start-path"].value
+        self.root = startpath
         if "show-hidden" not in self.settings.keys():
             self.manager.raiseSignal("set-new-setting", name="show-hidden",
                                      setting = settings.BooleanSetting())
@@ -154,7 +164,7 @@ class DirTree(plugins.Plugin):
             row = DirRow(path=os.path.join(startpath, path), plugin=self,
                          depth=1)
             self.widget.add(row)
-        self.widget.show_all()
+        self.widget.show_all()  
         
     def onMouseEvent(self, widget, event):
         row = self.widget.get_row_at_y(event.y)
@@ -169,6 +179,39 @@ class DirTree(plugins.Plugin):
             self.select(row)
         elif keyname == "space":
             row.toggle()
+
+    def onChangeDir(self, signal, *args, **kwargs):
+        newPath = kwargs["newPath"]
+        if self.selectedRow is not None:
+            if self.selectedRow.path == newPath: #nothing to do
+                return
+            self.selectedRow.deselect()
+            self.selectedRow = None   
+        root = breakPath(self.root)
+        target = breakPath(newPath)
+        if (len(target) < len(root) or target[:len(root)] != root 
+                or newPath == self.root):
+            return #target not in tree, nothing to do
+        index = len(root)
+        found = join(self.root, target[index])
+        rows = self.widget.get_children()
+        try:
+            targetRow = list(filter(lambda row: row.path == found, rows))[0]
+        except:
+            return
+        index += 1
+        while index < len(target):
+            found = join(found, target[index])
+            if not targetRow.isToggledOn:
+                targetRow.toggle()
+            for child in targetRow.children:
+                if child.path == found:
+                    targetRow = child
+                    break
+            index += 1
+        if targetRow.path == newPath:
+            targetRow.select()
+            self.selected = targetRow
             
     def select(self, row):
         if self.selectedRow is not None:
