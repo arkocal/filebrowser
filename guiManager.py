@@ -51,7 +51,7 @@ class WindowSizeSetting(settings.Setting):
             
     def setToDefault(self):
         """ Sets window size to default."""
-        self.set((640,480))
+        self.set((650,480))
 
 class guiManager(plugins.Plugin):
     """guiManager creates a Gtk.Main window with a left pane
@@ -120,16 +120,14 @@ class guiManager(plugins.Plugin):
         self.leftPaneList.modify_bg(0, Gdk.Color.parse("#f3f3f3")[1])
         self.leftPane.add(self.leftPaneList)
             
-        self.center = Gtk.ScrolledWindow()
         self.centerStack = Gtk.Stack()
         self.centerStack.set_homogeneous(False)
         transition = Gtk.StackTransitionType.SLIDE_LEFT_RIGHT
         self.centerStack.set_transition_type(transition)
         self.centerStack.set_transition_duration(400)
-        self.center.add(self.centerStack)
         
         box.pack_start(self.leftPane, False, False, 0)
-        box.pack_start(self.center, True, True, 0)
+        box.pack_start(self.centerStack, True, True, 0)
         
         self.window.add(box)        
         self.window.show_all()

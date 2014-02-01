@@ -145,8 +145,8 @@ def loadIcon(filename):
 
 def loadImage(filename):
     """Load thumbnail for filename, create one if not found.
-    Returns file name and tuple of loaded file (with resolution 256x256) saved
-    as a numpy array"""
+    Returns file name and tuple of loaded file (with resolution 256x256)
+    saved as a numpy array"""
     thumbnailPath = path2thumbnail(filename)
     if not isfile(thumbnailPath):
         image = createThumbnail(filename)
@@ -169,19 +169,6 @@ def openFile(path):
         os.system("""start "%s" """ % path)
     else:
         os.system("""open "%s" """ % path)
-
-
-def isDoubleClick(event):
-    return event.type == DOUBLE_CLICK and event.button == LEFT_BUTTON
-
-
-def isSingleClick(event):
-    return event.type == gtk.gdk.BUTTON_PRESS and event.button in [1, 3]
-
-
-def isRightClick(event):
-    return event.type == gtk.gdk.BUTTON_PRESS and event.button == RIGHT_BUTTON
-
 
 def findFileIndexIn(path, dirs):
     """ Return dir, index where dir is the directory in which the file has

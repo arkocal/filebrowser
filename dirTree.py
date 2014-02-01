@@ -183,10 +183,12 @@ class DirTree(plugins.Plugin):
         """Creates a DirTree object."""
         plugins.Plugin.__init__(self, manager)
         self.pname = "dirTree"
-        self.dependencies.append("settings")        
+        self.dependencies.append("settings")     
+        self.dependencies.append("guiManager")   
         self.addResponse("started", self.onStart)
         self.addResponse("change-dir", self.onChangeDir)
         self.respondAfter["started"].append("settings")
+        self.respondAfter["started"].append("guiManager")
         
     def onStart(self, signal, *args, **kwargs):
         """Creates the tree with start-path setting as root."""

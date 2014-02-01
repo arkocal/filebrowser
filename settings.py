@@ -40,12 +40,8 @@ class BooleanSetting(Setting):
     """Setting class for boolean properities defaulting False"""
 
     def __init__(self):
-<<<<<<< HEAD
         """Creates Setting object with value False."""
-        Setting.__init__(False)
-=======
         Setting.__init__(self, False)
->>>>>>> doc
         self.value = False
         
     def isValidValue(self, value):
