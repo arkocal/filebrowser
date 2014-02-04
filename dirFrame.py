@@ -89,7 +89,7 @@ class ThumbnailSizeSetting(settings.Setting):
             
     def setToDefault(self):
         """Sets thumbnail size to the default value."""
-        self.set(100)
+        self.set(128)
 
 class FileWidget(Gtk.Box):
     """Widget for showing files. Shows a thumbnail and file name.
@@ -274,18 +274,22 @@ class MainDirGrid(FlexibleGrid):
         if event.type == Gdk.EventType.BUTTON_PRESS:
             FlexibleGrid.on_button_press_event(self, widget, event)
             if self.selected[:] != oldSelection:
-                self.manager.raiseSignal("file-selected", files=self.selected[:])
+                self.manager.raiseSignal("file-selected",
+                                         files=[f.path for f in self.selected])
         elif event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
-            self.manager.raiseSignal("file-activated", files=self.selected[:])
+            self.manager.raiseSignal("file-activated",
+                                     files=[f.path for f in self.selected])
         return True
         
     def on_key_press_event(self, widget, event):
         oldSelection = self.selected[:]
         FlexibleGrid.on_key_press_event(self, widget, event)
         if self.selected[:] != oldSelection:
-            self.manager.raiseSignal("file-selected", files=self.selected[:])
+            self.manager.raiseSignal("file-selected", 
+                                     files=[f.path for f in self.selected])
         if Gdk.keyval_name(event.keyval) == "Return":
-            self.manager.raiseSignal("file-activated", files=self.selected[:])
+            self.manager.raiseSignal("file-activated",
+                                     files=[f.path for f in self.selected])
         return True
         
 class DirFrame(plugins.Plugin):
