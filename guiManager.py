@@ -82,6 +82,7 @@ class guiManager(plugins.Plugin):
         self.addResponse("request-remove-center", self.onCenterRemoveRequest)
         self.addResponse("request-remove-header", 
                          self.onHeaderRemoveRequest)
+        self.addResponse("change-dir", self.onChangeDir)
         self.respondAfter["started"].append("settings")
 
     def onStart(self, signal, *args, **kwargs):
@@ -193,6 +194,11 @@ class guiManager(plugins.Plugin):
         """Removes kwargs["widget"] from headerBar."""
         widget = kwargs["widget"]
         self.headerBar.remove(widget)
+
+    def onChangeDir(self, signal, *args, **kwargs):
+        """Sets subtitle to new path"""
+        newPath = kwargs["newPath"]
+        self.headerBar.set_subtitle(newPath)
 
 def createPlugin(manager):
     """Creates an instance of guiManager"""

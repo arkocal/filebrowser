@@ -211,6 +211,7 @@ class DirTree(plugins.Plugin):
         self.widget.add(row)
         row.toggle()
         self.widget.show_all()  
+        self.manager.raiseSignal("change-dir", newPath = startpath)
         
     def onMouseEvent(self, widget, event):
         """Responds to button press events.

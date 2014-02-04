@@ -55,49 +55,31 @@ def openFile(path):
     else:
         os.system("""open "%s" """ % path)
 
-class FileWidget(Gtk.EventBox):
+class FileWidget(Gtk.Box):
     """Widget for showing files. Shows a thumbnail and file name.
     This also raises file-select and file-activate signals."""
     
     def __init__(self, path):
         """Creates a FileWidget."""
-        Gtk.EventBox.__init__(self)
-        self.box = Gtk.Box(orientation = Gtk.Orientation.VERTICAL)
+        Gtk.Box.__init__(self, orientation = Gtk.Orientation.VERTICAL)
         self.pluginManager = None
         self.path = path
         (_, self.fname) = os.path.split(path)
         self.label = Gtk.Label(self.fname)
         self.label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.label.set_single_line_mode(False)
+        self.label.set_line_wrap(True)
         #This somehow makes ellipsize work
-        self.label.set_max_width_chars(1)        
-        thumbnail = getThumbnail(self.path, 100)
+        self.label.set_max_width_chars(1)      
+        
+        thumbnail = getThumbnail(self.path, 75)
         self.image = Gtk.Image()
+        self.label.set_margin_left(10)
+        self.label.set_margin_right(10) 
         if thumbnail is not None:
             self.image.set_from_pixbuf(thumbnail)
-        self.box.pack_start(self.image, True, True, 5)
-        self.box.pack_end(self.label, False, False, 5)
-        self.add(self.box)
-        self.connect("button-press-event", self.onMouseEvent)        
-    
-    def setPluginManager(self, pluginManager):
-        """Sets pluginManager, so that FileWidget can raise
-        siganls."""
-        self.pluginManager = pluginManager
-        
-    def onMouseEvent(self, widget, event):
-        """Handles mouse events.
-        Single click: select item.
-        Double click: activate item."""
-        modifiers = Gtk.accelerator_get_default_mod_mask()
-        ctrl = event.state & modifiers == Gdk.ModifierType.CONTROL_MASK
-        shift = event.state & modifiers == Gdk.ModifierType.SHIFT_MASK
-        kwargs = {"ctrl":ctrl, "shift":shift, "path":self.path}
-        if event.type == Gdk.EventType.BUTTON_PRESS:
-            if self.pluginManager is not None:
-                self.pluginManager.raiseSignal("file-select", **kwargs)
-        elif event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
-            if self.pluginManager is not None:
-                self.pluginManager.raiseSignal("file-activate", **kwargs)
+        self.pack_start(self.image, False, False, 5)
+        self.pack_start(self.label, False, False, 5)
     
 class FlexibleGrid(Gtk.Grid):
     """A subclass of Gtk.Grid that orders its children in a grid
@@ -114,19 +96,28 @@ class FlexibleGrid(Gtk.Grid):
         self.set_column_homogeneous(True)
         #Used to reorder children in the right order
         self.ordered_children = []
+        self.selected = []
+        self.cursor_at = None
  
     def add(self, child):
-        """Add child."""
+        """Add child wrapped in an EventBox."""
         items = len(self.ordered_children)
         column = items % self.columns
         row = items // self.columns
-        self.ordered_children.append(child)        
-        Gtk.Grid.attach(self, child, column, row, 1, 1)
+        ebox = Gtk.EventBox()
+        ebox.add(child)
+        ebox.connect("button-press-event", self.on_button_click)
+        self.ordered_children.append(child)  
+        Gtk.Grid.attach(self, ebox, column, row, 1, 1)
 
     def remove(self, child):
         """Remove child."""
         self.ordered_children.remove(child)
-        Gtk.Grid.remove(self, child)
+        eventBox = None
+        for ebox in self.get_children():
+            if ebox.get_child() == child:
+                eventBox = ebox
+        Gtk.Grid.remove(self, eventBox)
         
     def draw(self, event, cr):
         """Orders children in rows and columns and calls
@@ -137,21 +128,57 @@ class FlexibleGrid(Gtk.Grid):
         if columns != self.columns:
         #Reorder if number of columns has changed.
             self.columns = columns
-            for child in self.get_children():
-                Gtk.Grid.remove(self, child)
+            for ebox in self.get_children():
+                ebox.remove(ebox.get_child())
+                Gtk.Grid.remove(self, ebox)
             row = 0
             column = 0
             for i in range(len(self.ordered_children)):
                 child = self.ordered_children[i]
-                self.attach(child, column, row, 1, 1)
+                ebox = Gtk.EventBox()
+                ebox.add(child)
+                ebox.connect("button-press-event", self.on_button_click)
+                self.attach(ebox, column, row, 1, 1)
                 column += 1
                 if column == columns:
                     column = 0
                     row += 1
             Gtk.Grid.draw(self, cr)
-            return True
+            self.show_all()
         self.show_all() #This is needed because the children are
                         #just added.
+
+    def on_button_click(self, eventbox, event):
+        widget = eventbox.get_child()
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        ctrl = event.state & modifiers == Gdk.ModifierType.CONTROL_MASK
+        shift = event.state & modifiers == Gdk.ModifierType.SHIFT_MASK
+        selected_old = self.selected[:]
+        cursor_was_at = self.cursor_at
+        self.cursor_at = self.ordered_children.index(widget)
+        if not ctrl:
+            self.selected = []
+        if shift:
+            if cursor_was_at is not None:
+                if self.cursor_at > cursor_was_at:
+                    smaller, greater =  cursor_was_at, self.cursor_at
+                else:
+                    smaller, greater = self.cursor_at, cursor_was_at
+                self.selected = self.ordered_children[smaller:greater+1]
+                self.cursor_at = cursor_was_at
+        if ctrl:
+            if widget in self.selected:
+                self.selected.remove(widget)
+            else:
+                self.selected.append(widget)
+        elif widget not in self.selected:
+            self.selected.append(widget)
+        to_select = [i for i in self.selected if i not in selected_old]
+        to_deselect = [i for i in selected_old if i not in self.selected]
+        for item in to_select:
+            item.set_state(Gtk.StateType.SELECTED)
+        for item in to_deselect:
+            item.set_state(Gtk.StateType.NORMAL)
 
 class dirFrame(plugins.Plugin):
     """dirFrame shows the content of a directory in the center area.
@@ -177,17 +204,10 @@ class dirFrame(plugins.Plugin):
         self.path = None
         never = Gtk.PolicyType.NEVER
         self.scroll = Gtk.ScrolledWindow(hscrollbar_policy=never)
-        self.grid = FlexibleGrid(100)
-        self.grid.set_column_spacing(30)
-        self.grid.set_row_spacing(30)
+        self.grid = FlexibleGrid(180)
         self.scroll.add(self.grid)
         self.manager.raiseSignal("request-settings", widget=self)
         self.manager.raiseSignal("request-place-center", widget=self.scroll)
-        for f in os.listdir("/home/ali/Resimler"):
-            path = os.path.join("/home/ali/Resimler", f)
-            w = FileWidget(path)
-            w.setPluginManager(self.manager)
-            self.grid.add(w)
         self.grid.show()
 
     def onChangeDir(self, signal, *args, **kwargs):
@@ -196,14 +216,13 @@ class dirFrame(plugins.Plugin):
         fullPaths = [os.path.join(newPath, f) for f in os.listdir(newPath)]
         files = list(filter(os.path.isfile, fullPaths))
         for child in self.grid.get_children():
-            self.grid.remove(child)        
+            self.grid.remove(child.get_child())        
         # Loading thumbnails can take too long on  some directories
         # (like with lots of HD photos), so the process is divided
         # into chunks and after each chunk pending events are handled
         for chunk in chunks(files, 10):
             for f in chunk:
                 w = FileWidget(f)
-                w.setPluginManager(self.manager)
                 self.grid.add(w)
                 while Gtk.events_pending():
                     Gtk.main_iteration()
