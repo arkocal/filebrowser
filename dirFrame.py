@@ -4,7 +4,7 @@ from os.path import join
 import hashlib
 import urllib
 
-from gi.repository import Gtk, Gdk, GObject, Pango
+from gi.repository import Gtk, Gdk, GObject, Pango, GdkPixbuf
 from gi.repository.GdkPixbuf import Pixbuf
 
 import plugins
@@ -19,29 +19,45 @@ def isHidden(path):
     (_, fname) = os.path.split(path)
     return (fname[0]=="." or fname[-1]=="~")
 
-def pathToThumbnailPath(path):
+def pathToThumbnailPath(path, size):
     """Returns path to thumbnail of file at path (uses Gnome thumbnails)"""
     #PORT other platforms than gnome
     encodedUrl = ('file://' + path).encode()
     hashedUrl = hashlib.md5(encodedUrl).hexdigest()
     homeDir = (os.path.expanduser("~"))
-    thumbnailsDir = "%s/.cache/thumbnails/normal/" %homeDir
+    if size <= 128: sizeDir = "normal"
+    else: sizeDir = "large"
+    thumbnailsDir = "{home}/.cache/thumbnails/{size}/".format(home = homeDir,
+                                                              size = sizeDir)
     return (thumbnailsDir + hashedUrl + ".png")
 
 def getThumbnail(path, size):
     """Gets thumbnail for file at path. The function will try to create
     one if it is not found. Returns None if this fails."""
-    thumbnailPath = pathToThumbnailPath(path)
+    thumbnailPath = pathToThumbnailPath(path, size)
     try: 
         return Pixbuf.new_from_file_at_size(thumbnailPath, size, size)
     except: 
         print("Thumbnail not found. Trying to create")
-    try: 
-        pixbuf = Pixbuf.new_from_file_at_size(path, size, size)
-        pixbuf.savev(thumbnailPath, "png", [], [])
-        return pixbuf        
-    except: 
-        return Gtk.IconTheme.get_default().load_icon("gtk-file", size, 0)
+    if size>128:
+        tsize = 256
+    else:
+        tsize = 128
+    try:    
+        pixbuf = Pixbuf.new_from_file_at_size(path, tsize, tsize)
+    except:
+        return Gtk.IconTheme.get_default().load_icon("gtk-file", size, 0)        
+    pixbuf.savev(thumbnailPath, "png", [], [])
+    width = pixbuf.get_width()
+    height = pixbuf.get_height()
+    if height > width:
+        width = size * width / height
+        height = size
+    else:
+        height = size * height / width
+        width = size
+    pixbuf = pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
+    return pixbuf
     
 
 def openFile(path):
@@ -72,13 +88,13 @@ class FileWidget(Gtk.Box):
         #This somehow makes ellipsize work
         self.label.set_max_width_chars(1)      
         
-        thumbnail = getThumbnail(self.path, 75)
+        thumbnail = getThumbnail(self.path, 175)
         self.image = Gtk.Image()
         self.label.set_margin_left(10)
         self.label.set_margin_right(10) 
         if thumbnail is not None:
             self.image.set_from_pixbuf(thumbnail)
-        self.pack_start(self.image, False, False, 5)
+        self.pack_start(self.image, True, True, 5)
         self.pack_start(self.label, False, False, 5)
     
 class FlexibleGrid(Gtk.Grid):
@@ -111,12 +127,9 @@ class FlexibleGrid(Gtk.Grid):
         Gtk.Grid.attach(self, ebox, column, row, 1, 1)
 
     def remove(self, child):
-        """Remove child."""
+        """Removes child."""
         self.ordered_children.remove(child)
-        eventBox = None
-        for ebox in self.get_children():
-            if ebox.get_child() == child:
-                eventBox = ebox
+        eventBox = child.get_parent()
         Gtk.Grid.remove(self, eventBox)
         
     def draw(self, event, cr):
