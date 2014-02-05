@@ -12,6 +12,10 @@ from gi.repository.GdkPixbuf import Pixbuf
 import settings
 import plugins
 
+def GtkUpdate():
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+
 def chunks(l, n):
     """ Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
@@ -339,9 +343,8 @@ class MainDirGrid(FlexibleGrid):
                 w = FileWidget(f, thumbnail_size, 10)
                 self.add(w)
                 self.show_all()
-            while Gtk.events_pending():
-                Gtk.main_iteration()
-        
+            GtkUpdate()
+
     def on_key_press_event(self, widget, event):
         oldSelection = self.selected[:]
         FlexibleGrid.on_key_press_event(self, widget, event)
@@ -417,9 +420,8 @@ class DirFrame(plugins.Plugin):
         spinner.start()
         self.titleBox.pack_end(spinner, False, False, 20)
         self.titleBox.show_all()
+        GtkUpdate()
         self.grid.change_dir(newPath)
-        while Gtk.events_pending():
-            Gtk.main_iteration()
         self.titleBox.remove(spinner)
 
 def createPlugin(manager):
