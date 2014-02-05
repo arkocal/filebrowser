@@ -410,6 +410,7 @@ class DirFrame(plugins.Plugin):
                 self.grid.add(w)
                 while Gtk.events_pending():
                     Gtk.main_iteration()
+        self.grid.show_all()
 
 def createPlugin(manager):
     return DirFrame(manager)    
