@@ -1,8 +1,10 @@
 import platform
 import os
-from os.path import join
+from os.path import join, isdir
 import hashlib
 import urllib
+import re
+from mimetypes import guess_type
 
 from gi.repository import Gtk, Gdk, GObject, Pango, GdkPixbuf
 from gi.repository.GdkPixbuf import Pixbuf
@@ -32,10 +34,32 @@ def pathToThumbnailPath(path, size):
                                                               size = sizeDir)
     return (thumbnailsDir + hashedUrl + ".png")
 
+def loadThumbnailers():
+    """Load thumbnailers
+    thumbnailer files should be saved in thumbnailersDir and must be written
+    in Gnome's thumbnailer entry format"""
+    thumbnailers = {}
+    #PORT make setting
+    thumbnailersDir = "/usr/share/thumbnailers/"
+    if isdir(thumbnailersDir):
+        for filename in os.listdir(thumbnailersDir):
+            command = ""
+            tFile = open(join(thumbnailersDir, filename), "r").readlines()
+            for line in tFile:
+                if line[:5] == "Exec=":
+                    command = line[5:]
+                if line[:9] == "MimeType=":
+                    for mime in line[9:].split(";"):
+                        thumbnailers[mime] = command
+    return thumbnailers
+
 def getThumbnail(path, size):
     """Gets thumbnail for file at path. The function will try to create
     one if it is not found. Returns None if this fails."""
+    defaultIcon = Gtk.IconTheme.get_default().load_icon("gtk-file", size, 0)
     thumbnailPath = pathToThumbnailPath(path, size)
+    thumbnailers = loadThumbnailers()
+    pixbuf = None
     try: 
         return Pixbuf.new_from_file_at_size(thumbnailPath, size, size)
     except: 
@@ -47,7 +71,23 @@ def getThumbnail(path, size):
     try:    
         pixbuf = Pixbuf.new_from_file_at_size(path, tsize, tsize)
     except:
-        return Gtk.IconTheme.get_default().load_icon("gtk-file", size, 0)        
+        pass
+    if pixbuf is None and guess_type(path)[0] in thumbnailers.keys():
+        o = '"{}"'.format(thumbnailPath)
+        u = '"file://{}"'.format(path)
+        i = '"{}"'.format(path)
+        s = str(tsize)
+        command = thumbnailers[guess_type(path)[0]]
+        for (pat, sub) in [("%o", o), ("%i", i), ("%u", u), ("%s", s)]:
+            command = re.sub(pat, sub, command)       
+        os.system(command)
+        try:
+            pixbuf = Pixbuf.new_from_file_at_size(thumbnailPath, tsize, tsize)
+        except:
+            return defaultIcon
+    print("Pixbuf:",pixbuf)
+    if pixbuf is None:
+        return defaultIcon
     pixbuf.savev(thumbnailPath, "png", [], [])
     width = pixbuf.get_width()
     height = pixbuf.get_height()
@@ -316,7 +356,7 @@ class DirFrame(plugins.Plugin):
         self.manager.raiseSignal("request-settings", widget=self)
         if "thumbnail-size" not in self.settings.keys():
             self.manager.raiseSignal("set-new-setting", name="thumbnail-size",
-                                     setting = ThumbnailSizeSetting() )
+                                     setting = ThumbnailSizeSetting())        
         self.thumbnailSize = self.settings["thumbnail-size"].value
         self.spacing = 30
         self.path = None
@@ -341,6 +381,7 @@ class DirFrame(plugins.Plugin):
         self.grid.show()
 
     def onChangeDir(self, signal, *args, **kwargs):
+        showHidden = self.settings["show-hidden"].value
         newPath = kwargs["newPath"]
         try:
             title = newPath.split("/")[-1]
@@ -348,9 +389,13 @@ class DirFrame(plugins.Plugin):
             title = "Root directory"
         self.mainDirTitle.set_markup("<big>{}</big>".format(title))
         toadd = []
-        
-        fullPaths = [os.path.join(newPath, f) for f in os.listdir(newPath)]
+        toShow = os.listdir(newPath)
+        if not showHidden:
+            toShow = filter(lambda f: not isHidden(f) , toShow)
+        print(toShow)
+        fullPaths = [os.path.join(newPath, f) for f in toShow]
         files = list(filter(os.path.isfile, fullPaths))
+
         self.cursor_at = None
         self.secondary_cursor_at = None
         self.selected = []
