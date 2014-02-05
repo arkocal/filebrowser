@@ -237,19 +237,22 @@ class DirTree(plugins.Plugin):
     def onChangeDir(self, signal, *args, **kwargs):
         """Selects kwargs[“newPath”] if it is in dirTree."""
         newPath = kwargs["newPath"]
+        rows = self.widget.get_children()        
         if self.selectedRow is not None:
             if self.selectedRow.path == newPath: #nothing to do
-                return
+                return            
             self.selectedRow.deselect()
             self.selectedRow = None   
         root = breakPath(self.root)
         target = breakPath(newPath)
-        if (len(target) < len(root) or target[:len(root)] != root 
-                or newPath == self.root):
+        if (len(target) < len(root) or target[:len(root)] != root ):
             return #target not in tree, nothing to do
+        if newPath == self.root:
+            self.selectedRow = rows[0]
+            self.selectedRow.select()
+            return
         index = len(root)
         found = join(self.root, target[index])
-        rows = self.widget.get_children()
         try:
             targetRow = list(filter(lambda row: row.path == found, rows))[0]
         except:
@@ -266,7 +269,7 @@ class DirTree(plugins.Plugin):
             index += 1
         if targetRow.path == newPath:
             targetRow.select()
-            self.selected = targetRow
+            self.selectedRow = targetRow
             
     def select(self, row):
         """Selects row and deselects the old one."""

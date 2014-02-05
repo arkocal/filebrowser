@@ -63,7 +63,7 @@ def getThumbnail(path, size):
     try: 
         return Pixbuf.new_from_file_at_size(thumbnailPath, size, size)
     except: 
-        print("Thumbnail not found. Trying to create")
+        pass
     if size>128:
         tsize = 256
     else:
@@ -85,7 +85,6 @@ def getThumbnail(path, size):
             pixbuf = Pixbuf.new_from_file_at_size(thumbnailPath, tsize, tsize)
         except:
             return defaultIcon
-    print("Pixbuf:",pixbuf)
     if pixbuf is None:
         return defaultIcon
     pixbuf.savev(thumbnailPath, "png", [], [])
@@ -392,7 +391,6 @@ class DirFrame(plugins.Plugin):
         toShow = os.listdir(newPath)
         if not showHidden:
             toShow = filter(lambda f: not isHidden(f) , toShow)
-        print(toShow)
         fullPaths = [os.path.join(newPath, f) for f in toShow]
         files = list(filter(os.path.isfile, fullPaths))
 
