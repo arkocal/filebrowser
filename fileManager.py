@@ -22,7 +22,7 @@ class FileManager(plugins.Plugin):
         else:
             app = systemOpen[self.system]
         for f in files:
-            os.system("{} '{}'".format(app, f))
+            os.system('{} "{}"'.format(app, f))
     
     
 def createPlugin(manager):
