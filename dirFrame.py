@@ -362,6 +362,7 @@ class DirFrame(plugins.Plugin):
         never = Gtk.PolicyType.NEVER
         self.scroll = Gtk.ScrolledWindow(hscrollbar_policy=never)
         self.holder = Gtk.Box(orientation = Gtk.Orientation.VERTICAL)
+        self.titleBox = Gtk.Box()
         self.mainDirTitle = Gtk.Label()
         self.mainDirTitle.set_margin_left(self.spacing)
         self.mainDirTitle.set_margin_top(20)
@@ -372,7 +373,8 @@ class DirFrame(plugins.Plugin):
                                 self.thumbnailSize + self.spacing)
         self.grid.set_column_spacing(self.spacing)
         self.grid.set_can_focus(True)
-        self.holder.pack_start(self.mainDirTitle, False, False, 0)
+        self.titleBox.pack_start(self.mainDirTitle, False, False, 0)
+        self.holder.add(self.titleBox)
         self.holder.add(separator)        
         self.holder.add(self.grid)
         self.scroll.add(self.holder)
@@ -393,6 +395,7 @@ class DirFrame(plugins.Plugin):
             toShow = filter(lambda f: not isHidden(f) , toShow)
         fullPaths = [os.path.join(newPath, f) for f in toShow]
         files = list(filter(os.path.isfile, fullPaths))
+        files.sort()
 
         self.cursor_at = None
         self.secondary_cursor_at = None
@@ -402,13 +405,20 @@ class DirFrame(plugins.Plugin):
         # Loading thumbnails can take too long on  some directories
         # (like with lots of HD photos), so the process is divided
         # into chunks and after each chunk pending events are handled
+        spinner = Gtk.Spinner()
+        spinner.start()
+        self.titleBox.pack_end(spinner, False, False, 20)
+        self.titleBox.show_all()
+        while Gtk.events_pending():
+            Gtk.main_iteration()
         for chunk in chunks(files, 10):
             for f in chunk:
                 w = FileWidget(f, self.thumbnailSize, 10)
                 self.grid.add(w)
+                self.grid.show_all()
                 while Gtk.events_pending():
                     Gtk.main_iteration()
-        self.grid.show_all()
+        self.titleBox.remove(spinner)
 
 def createPlugin(manager):
     return DirFrame(manager)    
