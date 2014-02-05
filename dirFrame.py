@@ -307,6 +307,7 @@ class MainDirGrid(FlexibleGrid):
         FlexibleGrid.__init__(self, columnWidth)
         self.settings = settings
         self.manager = manager
+        self.path = None
         
     def on_button_press_event(self, widget, event):
         oldSelection = self.selected[:]
@@ -319,6 +320,27 @@ class MainDirGrid(FlexibleGrid):
             self.manager.raiseSignal("file-activated",
                                      files=[f.path for f in self.selected])
         return True
+       
+    def change_dir(self, new_path):
+        self.path = new_path
+        showHidden = self.settings["show-hidden"].value
+        thumbnail_size = self.settings["thumbnail-size"].value
+        for child in self.get_children():
+            self.remove(child.get_child())          
+        toadd = []
+        toShow = os.listdir(new_path)
+        if not showHidden:
+            toShow = filter(lambda f: not isHidden(f) , toShow)
+        fullPaths = [os.path.join(new_path, f) for f in toShow]
+        files = list(filter(os.path.isfile, fullPaths))
+        files.sort()   
+        for chunk in chunks(files, 10):
+            for f in chunk:
+                w = FileWidget(f, thumbnail_size, 10)
+                self.add(w)
+                self.show_all()
+            while Gtk.events_pending():
+                Gtk.main_iteration()
         
     def on_key_press_event(self, widget, event):
         oldSelection = self.selected[:]
@@ -382,42 +404,22 @@ class DirFrame(plugins.Plugin):
         self.grid.show()
 
     def onChangeDir(self, signal, *args, **kwargs):
-        showHidden = self.settings["show-hidden"].value
         newPath = kwargs["newPath"]
         try:
             title = newPath.split("/")[-1]
         except:
             title = "Root directory"
         self.mainDirTitle.set_markup("<big>{}</big>".format(title))
-        toadd = []
-        toShow = os.listdir(newPath)
-        if not showHidden:
-            toShow = filter(lambda f: not isHidden(f) , toShow)
-        fullPaths = [os.path.join(newPath, f) for f in toShow]
-        files = list(filter(os.path.isfile, fullPaths))
-        files.sort()
-
         self.cursor_at = None
         self.secondary_cursor_at = None
         self.selected = []
-        for child in self.grid.get_children():
-            self.grid.remove(child.get_child())        
-        # Loading thumbnails can take too long on  some directories
-        # (like with lots of HD photos), so the process is divided
-        # into chunks and after each chunk pending events are handled
         spinner = Gtk.Spinner()
         spinner.start()
         self.titleBox.pack_end(spinner, False, False, 20)
         self.titleBox.show_all()
+        self.grid.change_dir(newPath)
         while Gtk.events_pending():
             Gtk.main_iteration()
-        for chunk in chunks(files, 10):
-            for f in chunk:
-                w = FileWidget(f, self.thumbnailSize, 10)
-                self.grid.add(w)
-                self.grid.show_all()
-                while Gtk.events_pending():
-                    Gtk.main_iteration()
         self.titleBox.remove(spinner)
 
 def createPlugin(manager):
