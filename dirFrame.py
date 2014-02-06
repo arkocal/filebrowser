@@ -138,7 +138,7 @@ class FileWidget(Gtk.Box):
     """Widget for showing files. Shows a thumbnail and file name.
     This also raises file-select and file-activate signals."""
     
-    def __init__(self, path, size, margin):
+    def __init__(self, path, size, margin, showPixbuf):
         """Creates a FileWidget by loading/creating the thumbnail"""
         Gtk.Box.__init__(self, orientation = Gtk.Orientation.VERTICAL)
         self.pluginManager = None
@@ -149,16 +149,18 @@ class FileWidget(Gtk.Box):
         self.label.set_single_line_mode(False)
         self.label.set_line_wrap(True)
         #This somehow makes ellipsize work
-        self.label.set_max_width_chars(1)      
-        
-        thumbnail = getThumbnail(self.path, size)
-        self.image = Gtk.Image()
+        self.label.set_max_width_chars(1)              
         self.label.set_margin_left(margin)
-        self.label.set_margin_right(margin) 
-        if thumbnail is not None:
-            self.image.set_from_pixbuf(thumbnail)
-        self.pack_start(self.image, True, True, 5)
-        self.pack_start(self.label, False, False, 5)
+        self.label.set_margin_right(margin)         
+        if showPixbuf:
+            thumbnail = getThumbnail(self.path, size)
+            self.image = Gtk.Image()
+            if thumbnail is not None:
+                self.image.set_from_pixbuf(thumbnail)
+            self.pack_start(self.image, True, True, 5)
+        else:
+            self.label.set_alignment(0, 0.5)
+        self.pack_start(self.label, False, False, 5)    
     
 class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
     """A subclass of Gtk.Grid that orders its children in a grid
@@ -227,7 +229,6 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
                         #just added.
                         
     def on_button_press_event(self, eventbox, event):
-        self.grab_focus()
         widget = eventbox.get_child()
         modifiers = Gtk.accelerator_get_default_mod_mask()
         ctrl = event.state & modifiers == Gdk.ModifierType.CONTROL_MASK
@@ -254,9 +255,16 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
                 self.selected.remove(widget)
             else:
                 self.selected.append(widget)
+                widget.set_can_focus(True)
+                widget.grab_focus()
         elif widget not in self.selected:
             self.selected.append(widget)
+            widget.set_can_focus(True)
+            widget.grab_focus()
+            print("Grabbe")
         self.update_selection(selected_old)
+        if selected_old != self.selected:
+            self.plugin.deselectAllBut(self)
  
     def on_key_press_event(self, widget, event):
         keyname = Gdk.keyval_name(event.keyval)
@@ -282,6 +290,8 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
                 smaller = cursors[0]
                 greater = cursors[1]
                 self.selected = self.ordered_children[smaller:greater+1]
+                self.ordered_children[self.secondary_cursor_at].set_can_focus(True)
+                self.ordered_children[self.secondary_cursor_at].grab_focus()
                 self.update_selection(selected_old)
         elif self.cursor_at is not None:
             if self.secondary_cursor_at is not None:
@@ -290,7 +300,15 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
                 self.cursor_at += dif[keyname]
                 self.secondary_cursor_at = self.cursor_at
                 self.selected = [self.ordered_children[self.cursor_at]]
+                self.ordered_children[self.cursor_at].set_can_focus(True)
+                self.ordered_children[self.cursor_at].grab_focus()
                 self.update_selection(selected_old)
+            elif self.cursor_at + dif[keyname] >= len(self.ordered_children):
+                self.plugin.moveSelectionToNextGrid(self)
+                return True
+            elif self.cursor_at + dif[keyname] < 0:
+                self.plugin.moveSelectionToPrevGrid(self)
+                return True
         if self.cursor_at is None:
             self.cursor_at = 0
             self.selected = [self.ordered_children[self.cursor_at]]
@@ -305,13 +323,23 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
         for item in to_deselect:
             item.set_state(Gtk.StateType.NORMAL) 
 
-class MainDirGrid(FlexibleGrid):
+    def deselect_all(self):
+        old = self.selected[:]
+        self.selected = []
+        self.cursor_at = None
+        self.secondary_cursor_at = None
+        self.update_selection(old)
+        self.show_all()
 
-    def __init__(self, settings, manager, columnWidth=100):
+class DirGrid(FlexibleGrid):
+
+    def __init__(self, plugin, columnWidth=100, showPixbuf=True):
         FlexibleGrid.__init__(self, columnWidth)
-        self.settings = settings
-        self.manager = manager
+        self.plugin = plugin
+        self.settings = plugin.settings
+        self.manager = plugin.manager
         self.path = None
+        self.showPixbuf = showPixbuf
         
     def on_button_press_event(self, widget, event):
         oldSelection = self.selected[:]
@@ -340,7 +368,7 @@ class MainDirGrid(FlexibleGrid):
         files.sort()   
         for chunk in chunks(files, 10):
             for f in chunk:
-                w = FileWidget(f, thumbnail_size, 10)
+                w = FileWidget(f, thumbnail_size, 10, self.showPixbuf)
                 self.add(w)
                 self.show_all()
             GtkUpdate()
@@ -394,8 +422,7 @@ class DirFrame(plugins.Plugin):
         self.mainDirTitle.set_margin_bottom(10)
         self.mainDirTitle.set_alignment(0, 1)
         separator = Gtk.HSeparator()
-        self.grid = MainDirGrid(self.settings, self.manager,
-                                self.thumbnailSize + self.spacing)
+        self.grid = DirGrid(self, self.thumbnailSize + self.spacing)
         self.grid.set_column_spacing(self.spacing)
         self.grid.set_can_focus(True)
         self.titleBox.pack_start(self.mainDirTitle, False, False, 0)
@@ -405,8 +432,10 @@ class DirFrame(plugins.Plugin):
         self.scroll.add(self.holder)
         self.manager.raiseSignal("request-place-center", widget=self.scroll)
         self.grid.show()
+        self.subdirWidgets = []
 
     def onChangeDir(self, signal, *args, **kwargs):
+        showHidden = self.settings["show-hidden"].value    
         newPath = kwargs["newPath"]
         try:
             title = newPath.split("/")[-1]
@@ -416,13 +445,76 @@ class DirFrame(plugins.Plugin):
         self.cursor_at = None
         self.secondary_cursor_at = None
         self.selected = []
-        spinner = Gtk.Spinner()
-        spinner.start()
+        spinner = Gtk.Spinner(active=True)
         self.titleBox.pack_end(spinner, False, False, 20)
         self.titleBox.show_all()
         GtkUpdate()
         self.grid.change_dir(newPath)
+        self.grids = [self.grid]
+        for subdirWidget in self.subdirWidgets:
+            self.holder.remove(subdirWidget)
+        self.subdirWidgets = []
+        toShow = os.listdir(newPath)
+        if not showHidden:
+            toShow = filter(lambda f: not isHidden(f) , toShow)
+        fullPaths = [os.path.join(newPath, f) for f in toShow]
+        subdirs = list(filter(os.path.isdir, fullPaths))
+        subdirs.sort()
+        for subdir in subdirs:
+            self.addSubdirTitle(subdir)
+            self.addSubdirContent(subdir)
+        self.holder.show_all()
         self.titleBox.remove(spinner)
+
+    def addSubdirTitle(self, subdir):
+        label = Gtk.Label()
+        (_, subdir) = os.path.split(subdir)
+        label.set_markup("<big>{}</big>".format(subdir))
+        label.set_margin_left(self.spacing)
+        label.set_alignment(0, 1)
+        separator = Gtk.HSeparator()  
+        self.subdirWidgets.append(label)
+        self.subdirWidgets.append(separator)            
+        self.holder.add(label)
+        self.holder.add(separator)
+
+    def addSubdirContent(self, subdir):
+        #TODO make settings
+        grid = DirGrid(self, 300, False)
+        grid.change_dir(subdir)
+        grid.set_column_spacing(self.spacing*2)
+        grid.set_border_width(self.spacing)
+        grid.set_margin_top(-self.spacing/2)
+        grid.set_can_focus(True)
+        self.holder.add(grid)
+        self.grids.append(grid)
+        self.subdirWidgets.append(grid)
+        
+    def moveSelectionToNextGrid(self, grid):
+        index = self.grids.index(grid)
+        if index < len(self.grids) -1:
+            nextGrid = self.grids[index+1]
+            nextGrid.grab_focus()
+            grid.deselect_all()
+            nextGrid.selected = [nextGrid.ordered_children[0]]          
+            nextGrid.update_selection([])
+            nextGrid.cursor_at = 0
+            
+    def moveSelectionToPrevGrid(self, grid):
+        index = self.grids.index(grid)
+        if index > 0:
+            nextGrid = self.grids[index-1]
+            nextGrid.grab_focus()
+            grid.deselect_all()
+            nextGrid.selected = [nextGrid.ordered_children[-1]]          
+            nextGrid.update_selection([])
+            nextGrid.cursor_at = len(nextGrid.ordered_children) - 1
+    
+    def deselectAllBut(self, activeGrid):
+        for grid in self.grids:
+            if grid != activeGrid:
+                grid.deselect_all()
+            
 
 def createPlugin(manager):
     return DirFrame(manager)    
