@@ -12,38 +12,45 @@ from gi.repository.GdkPixbuf import Pixbuf
 import settings
 import plugins
 
+
 def GtkUpdate():
     while Gtk.events_pending():
         Gtk.main_iteration()
 
+
 def chunks(l, n):
     """ Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
-        yield l[i:i+n]
+        yield l[i:i + n]
+
 
 def isHidden(path):
     """Returns whether file at the given path is hidden."""
     (_, fname) = os.path.split(path)
-    return (fname[0]=="." or fname[-1]=="~")
+    return (fname[0] == "." or fname[-1] == "~")
+
 
 def pathToThumbnailPath(path, size):
     """Returns path to thumbnail of file at path (uses Gnome thumbnails)"""
-    #PORT other platforms than gnome
+    # PORT other platforms than gnome
     encodedUrl = ('file://' + path).encode()
     hashedUrl = hashlib.md5(encodedUrl).hexdigest()
     homeDir = (os.path.expanduser("~"))
-    if size <= 128: sizeDir = "normal"
-    else: sizeDir = "large"
-    thumbnailsDir = "{home}/.cache/thumbnails/{size}/".format(home = homeDir,
-                                                              size = sizeDir)
+    if size <= 128:
+        sizeDir = "normal"
+    else:
+        sizeDir = "large"
+    thumbnailsDir = "{home}/.cache/thumbnails/{size}/".format(home=homeDir,
+                                                              size=sizeDir)
     return (thumbnailsDir + hashedUrl + ".png")
+
 
 def loadThumbnailers():
     """Load thumbnailers
     thumbnailer files should be saved in thumbnailersDir and must be written
     in Gnome's thumbnailer entry format"""
     thumbnailers = {}
-    #PORT make setting
+    # PORT make setting
     thumbnailersDir = "/usr/share/thumbnailers/"
     if isdir(thumbnailersDir):
         for filename in os.listdir(thumbnailersDir):
@@ -57,6 +64,7 @@ def loadThumbnailers():
                         thumbnailers[mime] = command
     return thumbnailers
 
+
 def getThumbnail(path, size):
     """Gets thumbnail for file at path. The function will try to create
     one if it is not found. Returns None if this fails."""
@@ -64,15 +72,15 @@ def getThumbnail(path, size):
     thumbnailPath = pathToThumbnailPath(path, size)
     thumbnailers = loadThumbnailers()
     pixbuf = None
-    try: 
+    try:
         return Pixbuf.new_from_file_at_size(thumbnailPath, size, size)
-    except: 
+    except:
         pass
-    if size>128:
+    if size > 128:
         tsize = 256
     else:
         tsize = 128
-    try:    
+    try:
         pixbuf = Pixbuf.new_from_file_at_size(path, tsize, tsize)
     except:
         pass
@@ -83,7 +91,7 @@ def getThumbnail(path, size):
         s = str(tsize)
         command = thumbnailers[guess_type(path)[0]]
         for (pat, sub) in [("%o", o), ("%i", i), ("%u", u), ("%s", s)]:
-            command = re.sub(pat, sub, command)       
+            command = re.sub(pat, sub, command)
         os.system(command)
         try:
             pixbuf = Pixbuf.new_from_file_at_size(thumbnailPath, tsize, tsize)
@@ -102,11 +110,11 @@ def getThumbnail(path, size):
         width = size
     pixbuf = pixbuf.scale_simple(width, height, GdkPixbuf.InterpType.BILINEAR)
     return pixbuf
-    
+
 
 def openFile(path):
     """Opens file at given path."""
-    #TEST test on other platforms than Linux
+    # TEST test on other platforms than Linux
     system = platform.system()
     if system == "Linux":
         os.system("""xdg-open "%s" """ % path)
@@ -115,7 +123,9 @@ def openFile(path):
     else:
         os.system("""open "%s" """ % path)
 
+
 class ThumbnailSizeSetting(settings.Setting):
+
     "Setting for thumbnail sizes."""
 
     def __init__(self):
@@ -126,21 +136,23 @@ class ThumbnailSizeSetting(settings.Setting):
     def isValidValue(self, value):
         """Returns whether value is a valid size."""
         try:
-            return (type(value) is int) and (0 < value < 60000) 
+            return (type(value) is int) and (0 < value < 60000)
         except:
             return False
-            
+
     def setToDefault(self):
         """Sets thumbnail size to the default value."""
         self.set(128)
 
+
 class FileWidget(Gtk.Box):
+
     """Widget for showing files. Shows a thumbnail and file name.
     This also raises file-select and file-activate signals."""
-    
+
     def __init__(self, path, size, margin, showPixbuf):
         """Creates a FileWidget by loading/creating the thumbnail"""
-        Gtk.Box.__init__(self, orientation = Gtk.Orientation.VERTICAL)
+        Gtk.Box.__init__(self, orientation=Gtk.Orientation.VERTICAL)
         self.pluginManager = None
         self.path = path
         (_, self.fname) = os.path.split(path)
@@ -148,10 +160,10 @@ class FileWidget(Gtk.Box):
         self.label.set_ellipsize(Pango.EllipsizeMode.END)
         self.label.set_single_line_mode(False)
         self.label.set_line_wrap(True)
-        #This somehow makes ellipsize work
-        self.label.set_max_width_chars(1)              
+        # This somehow makes ellipsize work
+        self.label.set_max_width_chars(1)
         self.label.set_margin_left(margin)
-        self.label.set_margin_right(margin)         
+        self.label.set_margin_right(margin)
         if showPixbuf:
             thumbnail = getThumbnail(self.path, size)
             self.image = Gtk.Image()
@@ -160,29 +172,31 @@ class FileWidget(Gtk.Box):
             self.pack_start(self.image, True, True, 5)
         else:
             self.label.set_alignment(0, 0.5)
-        self.pack_start(self.label, False, False, 5)    
-    
+        self.pack_start(self.label, False, False, 5)
+
+
 class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
+
     """A subclass of Gtk.Grid that orders its children in a grid
     with a given column width. The number of columns is adjusted
     automatically."""
-    
-    def __init__(self, column_width = 100):
+
+    def __init__(self, column_width=100):
         """ Creates a FlexibleGrid with given column_with."""
-        Gtk.EventBox.__init__(self)        
+        Gtk.EventBox.__init__(self)
         Gtk.Grid.__init__(self)
         self.connect("draw", self.draw)
         self.connect("key-press-event", self.on_key_press_event)
         self.column_width = column_width
-        #Number of columns to show
+        # Number of columns to show
         self.columns = 1
         self.set_column_homogeneous(True)
-        #Used to reorder children in the right order
+        # Used to reorder children in the right order
         self.ordered_children = []
         self.selected = []
         self.cursor_at = None
         self.secondary_cursor_at = None
- 
+
     def add(self, child):
         """Add child wrapped in an EventBox."""
         items = len(self.ordered_children)
@@ -191,7 +205,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
         ebox = Gtk.EventBox()
         ebox.add(child)
         ebox.connect("button-press-event", self.on_button_press_event)
-        self.ordered_children.append(child)  
+        self.ordered_children.append(child)
         Gtk.Grid.attach(self, ebox, column, row, 1, 1)
 
     def remove(self, child):
@@ -199,7 +213,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
         self.ordered_children.remove(child)
         eventBox = child.get_parent()
         Gtk.Grid.remove(self, eventBox)
-        
+
     def draw(self, event, cr):
         """Orders children in rows and columns and calls
         Gtk.Grid.draw. This doesn't work right if there is a children
@@ -207,7 +221,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
         width = self.get_allocated_width()
         columns = int(width / self.column_width)
         if columns != self.columns:
-        #Reorder if number of columns has changed.
+        # Reorder if number of columns has changed.
             self.columns = columns
             for ebox in self.get_children():
                 ebox.remove(ebox.get_child())
@@ -225,9 +239,9 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
                     row += 1
             Gtk.Grid.draw(self, cr)
             self.show_all()
-        self.show_all() #This is needed because the children are
-                        #just added.
-                        
+        self.show_all()  # This is needed because the children are
+                        # just added.
+
     def on_button_press_event(self, eventbox, event):
         widget = eventbox.get_child()
         modifiers = Gtk.accelerator_get_default_mod_mask()
@@ -244,7 +258,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
                 cursors.sort()
                 smaller = cursors[0]
                 greater = cursors[1]
-                self.selected = self.ordered_children[smaller:greater+1]
+                self.selected = self.ordered_children[smaller:greater + 1]
                 # When using shift, cursor should remain the same
                 self.cursor_at, self.secondary_cursor_at = \
                     self.secondary_cursor_at, self.cursor_at
@@ -265,38 +279,39 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
         self.update_selection(selected_old)
         if selected_old != self.selected:
             self.plugin.deselectAllBut(self)
- 
+
     def on_key_press_event(self, widget, event):
         keyname = Gdk.keyval_name(event.keyval)
         if keyname in ["Left", "Right", "Up", "Down"]:
             return self.move_selection_by_key(event)
-            
+
     def move_selection_by_key(self, event):
         keyname = Gdk.keyval_name(event.keyval)
         modifiers = Gtk.accelerator_get_default_mod_mask()
         ctrl = event.state & modifiers == Gdk.ModifierType.CONTROL_MASK
         shift = event.state & modifiers == Gdk.ModifierType.SHIFT_MASK
         dif = {"Up": -self.columns, "Down": self.columns,
-              "Left": -1, "Right":1}
+               "Left": -1, "Right": 1}
         selected_old = self.selected[:]
         if ctrl:
-            pass #TODO implement
+            pass  # TODO implement
         elif shift and self.cursor_at is not None:
-            if (0 <= self.secondary_cursor_at + dif[keyname] 
+            if (0 <= self.secondary_cursor_at + dif[keyname]
                     < len(self.ordered_children)):
                 self.secondary_cursor_at += dif[keyname]
                 cursors = [self.secondary_cursor_at, self.cursor_at]
                 cursors.sort()
                 smaller = cursors[0]
                 greater = cursors[1]
-                self.selected = self.ordered_children[smaller:greater+1]
-                self.ordered_children[self.secondary_cursor_at].set_can_focus(True)
+                self.selected = self.ordered_children[smaller:greater + 1]
+                self.ordered_children[
+                    self.secondary_cursor_at].set_can_focus(True)
                 self.ordered_children[self.secondary_cursor_at].grab_focus()
                 self.update_selection(selected_old)
         elif self.cursor_at is not None:
             if self.secondary_cursor_at is not None:
                 self.cursor_at = self.secondary_cursor_at
-            if 0 <= self.cursor_at + dif[keyname] < len(self.ordered_children):    
+            if 0 <= self.cursor_at + dif[keyname] < len(self.ordered_children):
                 self.cursor_at += dif[keyname]
                 self.secondary_cursor_at = self.cursor_at
                 self.selected = [self.ordered_children[self.cursor_at]]
@@ -313,7 +328,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
             self.cursor_at = 0
             self.selected = [self.ordered_children[self.cursor_at]]
             self.update_selection([])
-        return True    
+        return True
 
     def update_selection(self, selected_old):
         to_select = [i for i in self.selected if i not in selected_old]
@@ -321,7 +336,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
         for item in to_select:
             item.set_state(Gtk.StateType.SELECTED)
         for item in to_deselect:
-            item.set_state(Gtk.StateType.NORMAL) 
+            item.set_state(Gtk.StateType.NORMAL)
 
     def deselect_all(self):
         old = self.selected[:]
@@ -330,6 +345,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
         self.secondary_cursor_at = None
         self.update_selection(old)
         self.show_all()
+
 
 class DirGrid(FlexibleGrid):
 
@@ -340,7 +356,7 @@ class DirGrid(FlexibleGrid):
         self.manager = plugin.manager
         self.path = None
         self.showPixbuf = showPixbuf
-        
+
     def on_button_press_event(self, widget, event):
         oldSelection = self.selected[:]
         if event.type == Gdk.EventType.BUTTON_PRESS:
@@ -352,20 +368,20 @@ class DirGrid(FlexibleGrid):
             self.manager.raiseSignal("file-activated",
                                      files=[f.path for f in self.selected])
         return True
-       
+
     def change_dir(self, new_path):
         self.path = new_path
         showHidden = self.settings["show-hidden"].value
         thumbnail_size = self.settings["thumbnail-size"].value
         for child in self.get_children():
-            self.remove(child.get_child())          
+            self.remove(child.get_child())
         toadd = []
         toShow = os.listdir(new_path)
         if not showHidden:
-            toShow = filter(lambda f: not isHidden(f) , toShow)
+            toShow = filter(lambda f: not isHidden(f), toShow)
         fullPaths = [os.path.join(new_path, f) for f in toShow]
         files = list(filter(os.path.isfile, fullPaths))
-        files.sort()   
+        files.sort()
         for chunk in chunks(files, 10):
             for f in chunk:
                 w = FileWidget(f, thumbnail_size, 10, self.showPixbuf)
@@ -377,18 +393,20 @@ class DirGrid(FlexibleGrid):
         oldSelection = self.selected[:]
         FlexibleGrid.on_key_press_event(self, widget, event)
         if self.selected[:] != oldSelection:
-            self.manager.raiseSignal("file-selected", 
+            self.manager.raiseSignal("file-selected",
                                      files=[f.path for f in self.selected])
         if Gdk.keyval_name(event.keyval) == "Return":
             self.manager.raiseSignal("file-activated",
                                      files=[f.path for f in self.selected])
         return True
-        
+
+
 class DirFrame(plugins.Plugin):
+
     """dirFrame shows the content of a directory in the center area.
     It is also responsible for creating signals for opening/
     previewing a file."""
-    
+
     def __init__(self, manager):
         """Create a dirFrame object"""
         plugins.Plugin.__init__(self, manager)
@@ -402,19 +420,19 @@ class DirFrame(plugins.Plugin):
         self.respondBefore["started"].append("dirTree")
         self.respondAfter["started"].append("guiManager")
         self.respondAfter["started"].append("settings")
-        
+
     def onStart(self, signal, *args, **kwargs):
         """Create the frame unpopulated."""
         self.manager.raiseSignal("request-settings", widget=self)
         if "thumbnail-size" not in self.settings.keys():
             self.manager.raiseSignal("set-new-setting", name="thumbnail-size",
-                                     setting = ThumbnailSizeSetting())        
+                                     setting=ThumbnailSizeSetting())
         self.thumbnailSize = self.settings["thumbnail-size"].value
         self.spacing = 30
         self.path = None
         never = Gtk.PolicyType.NEVER
         self.scroll = Gtk.ScrolledWindow(hscrollbar_policy=never)
-        self.holder = Gtk.Box(orientation = Gtk.Orientation.VERTICAL)
+        self.holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.titleBox = Gtk.Box()
         self.mainDirTitle = Gtk.Label()
         self.mainDirTitle.set_margin_left(self.spacing)
@@ -427,7 +445,7 @@ class DirFrame(plugins.Plugin):
         self.grid.set_can_focus(True)
         self.titleBox.pack_start(self.mainDirTitle, False, False, 0)
         self.holder.add(self.titleBox)
-        self.holder.add(separator)        
+        self.holder.add(separator)
         self.holder.add(self.grid)
         self.scroll.add(self.holder)
         self.manager.raiseSignal("request-place-center", widget=self.scroll)
@@ -435,7 +453,7 @@ class DirFrame(plugins.Plugin):
         self.subdirWidgets = []
 
     def onChangeDir(self, signal, *args, **kwargs):
-        showHidden = self.settings["show-hidden"].value    
+        showHidden = self.settings["show-hidden"].value
         newPath = kwargs["newPath"]
         try:
             title = newPath.split("/")[-1]
@@ -456,7 +474,7 @@ class DirFrame(plugins.Plugin):
         self.subdirWidgets = []
         toShow = os.listdir(newPath)
         if not showHidden:
-            toShow = filter(lambda f: not isHidden(f) , toShow)
+            toShow = filter(lambda f: not isHidden(f), toShow)
         fullPaths = [os.path.join(newPath, f) for f in toShow]
         subdirs = list(filter(os.path.isdir, fullPaths))
         subdirs.sort()
@@ -472,49 +490,49 @@ class DirFrame(plugins.Plugin):
         label.set_markup("<big>{}</big>".format(subdir))
         label.set_margin_left(self.spacing)
         label.set_alignment(0, 1)
-        separator = Gtk.HSeparator()  
+        separator = Gtk.HSeparator()
         self.subdirWidgets.append(label)
-        self.subdirWidgets.append(separator)            
+        self.subdirWidgets.append(separator)
         self.holder.add(label)
         self.holder.add(separator)
 
     def addSubdirContent(self, subdir):
-        #TODO make settings
+        # TODO make settings
         grid = DirGrid(self, 300, False)
         grid.change_dir(subdir)
-        grid.set_column_spacing(self.spacing*2)
+        grid.set_column_spacing(self.spacing * 2)
         grid.set_border_width(self.spacing)
-        grid.set_margin_top(-self.spacing/2)
+        grid.set_margin_top(-self.spacing / 2)
         grid.set_can_focus(True)
         self.holder.add(grid)
         self.grids.append(grid)
         self.subdirWidgets.append(grid)
-        
+
     def moveSelectionToNextGrid(self, grid):
         index = self.grids.index(grid)
-        if index < len(self.grids) -1:
-            nextGrid = self.grids[index+1]
+        if index < len(self.grids) - 1:
+            nextGrid = self.grids[index + 1]
             nextGrid.grab_focus()
             grid.deselect_all()
-            nextGrid.selected = [nextGrid.ordered_children[0]]          
+            nextGrid.selected = [nextGrid.ordered_children[0]]
             nextGrid.update_selection([])
             nextGrid.cursor_at = 0
-            
+
     def moveSelectionToPrevGrid(self, grid):
         index = self.grids.index(grid)
         if index > 0:
-            nextGrid = self.grids[index-1]
+            nextGrid = self.grids[index - 1]
             nextGrid.grab_focus()
             grid.deselect_all()
-            nextGrid.selected = [nextGrid.ordered_children[-1]]          
+            nextGrid.selected = [nextGrid.ordered_children[-1]]
             nextGrid.update_selection([])
             nextGrid.cursor_at = len(nextGrid.ordered_children) - 1
-    
+
     def deselectAllBut(self, activeGrid):
         for grid in self.grids:
             if grid != activeGrid:
                 grid.deselect_all()
-            
+
 
 def createPlugin(manager):
-    return DirFrame(manager)    
+    return DirFrame(manager)
