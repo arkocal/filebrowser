@@ -3,7 +3,7 @@ from os.path import join, split, expanduser, isdir
 from gi.repository import Gtk, Gdk, Pango
 import cairo
 
-import settings
+import plugin.settings as settings
 import plugins
 
 

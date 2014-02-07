@@ -11,7 +11,7 @@ from threading import Thread
 
 from gi.repository import Gtk, Gdk
 
-import settings
+import plugin.settings as settings
 import plugins
 
 class LeftPaneWidthSetting(settings.Setting):

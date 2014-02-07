@@ -9,7 +9,7 @@ from mimetypes import guess_type
 from gi.repository import Gtk, Gdk, GObject, Pango, GdkPixbuf
 from gi.repository.GdkPixbuf import Pixbuf
 
-import settings
+import plugin.settings as settings
 import plugins
 
 
