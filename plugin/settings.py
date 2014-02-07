@@ -88,7 +88,7 @@ class Settings(plugins.Plugin):
         
     def onStart(self, signal, *args, **kwargs):
         """Loads settings from disk."""
-        settingsPath = join(SOURCE_DIR, "settings")
+        settingsPath = join(SOURCE_DIR, "settings", "settings")
         try:
             with open(settingsPath, "rb") as f:
                 self.settings = pickle.load(f)
@@ -125,7 +125,7 @@ class Settings(plugins.Plugin):
 
     def save(self):
         """Saves settings to disk"""
-        settingsPath = join(SOURCE_DIR, "settings")    
+        settingsPath = join(SOURCE_DIR,"settings", "settings")    
         with open(settingsPath, "wb") as f:
             pickle.dump(self.settings, f)    
 
