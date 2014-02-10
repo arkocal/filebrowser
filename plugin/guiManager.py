@@ -66,6 +66,7 @@ class guiManager(plugins.Plugin):
        request-remove-left-pane: onLeftPaneRemoveRequest
        request-remove-center: onCenterRemoveRequest
        request-remove-header: onHeaderRemoveRequest
+       request_scroll: onScrollRequest
        """
 
     def __init__(self, manager):
@@ -82,6 +83,7 @@ class guiManager(plugins.Plugin):
         self.addResponse("request-remove-center", self.onCenterRemoveRequest)
         self.addResponse("request-remove-header", 
                          self.onHeaderRemoveRequest)
+        self.addResponse("request-scroll", self.onScrollRequest)
         self.addResponse("change-dir", self.onChangeDir)
         self.respondAfter["started"].append("settings")
 
@@ -199,6 +201,18 @@ class guiManager(plugins.Plugin):
         """Sets subtitle to new path"""
         newPath = kwargs["newPath"]
         self.headerBar.set_subtitle(newPath)
+
+    def onScrollRequest(self, signal, *args, **kwargs):
+        """Scrolls to kwargs['widget'] or kwargs['y']"""
+        if "y" in kwargs:
+            y = kwargs["y"]
+        else:
+            widget = kwargs["widget"]
+            (_, y) = widget.translate_coordinates(self.leftPaneList, 0, 0)
+            if "offset" in kwargs:
+                y += kwargs["offset"]
+        print(y)
+        self.leftPane.get_vadjustment().set_value(y)
 
 def createPlugin(manager):
     """Creates an instance of guiManager"""

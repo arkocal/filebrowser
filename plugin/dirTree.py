@@ -1,11 +1,14 @@
 import os
 from os.path import join, split, expanduser, isdir
-from gi.repository import Gtk, Gdk, Pango
+from gi.repository import Gtk, Gdk, Pango, GLib
 import cairo
 
 import plugin.settings as settings
 import plugins
 
+def GtkUpdate():
+    while Gtk.events_pending():
+        Gtk.main_iteration()
 
 def isHidden(path):
     """Returns whether file at the given path is hidden."""
@@ -219,9 +222,12 @@ class DirTree(plugins.Plugin):
         Double click: select directory"""
         row = self.widget.get_row_at_y(event.y)
         if event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
+            self._scroll_to_row(row)
             self.select(row)
         elif event.type == Gdk.EventType.BUTTON_PRESS:
             row.toggle()
+        if row.isToggledOn and row.children:
+            GLib.timeout_add(250, self._scroll_to_row, row)
      
     def onKeyEvent(self, row, event):
         """Responds to key press events.
@@ -230,9 +236,14 @@ class DirTree(plugins.Plugin):
         """
         keyname = Gdk.keyval_name(event.keyval)
         if keyname == "Return":
+            self._scroll_to_row(row)        
             self.select(row)
         elif keyname == "space":
             row.toggle()
+            print (row.isToggledOn, row.children)
+            if row.isToggledOn and row.children:
+                print("Scrolling to row")
+                self._scroll_to_row(row)
 
     def onChangeDir(self, signal, *args, **kwargs):
         """Selects kwargs[“newPath”] if it is in dirTree."""
@@ -278,6 +289,12 @@ class DirTree(plugins.Plugin):
         self.selectedRow = row
         row.select()
         self.manager.raiseSignal("change-dir", newPath = row.path)
+
+    def _scroll_to_row(self, row):
+        GtkUpdate()
+        offset = -row.get_allocated_height()
+        self.manager.raiseSignal("request-scroll", widget=row, offset=offset)
+        return False     
                
 def createPlugin(manager):
     return DirTree(manager)

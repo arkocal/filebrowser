@@ -387,7 +387,7 @@ class DirGrid(FlexibleGrid):
                 w = FileWidget(f, thumbnail_size, 10, self.showPixbuf)
                 self.add(w)
                 self.show_all()
-            GtkUpdate()
+                GtkUpdate()
 
     def on_key_press_event(self, widget, event):
         oldSelection = self.selected[:]
@@ -410,6 +410,7 @@ class DirFrame(plugins.Plugin):
     def __init__(self, manager):
         """Create a dirFrame object"""
         plugins.Plugin.__init__(self, manager)
+        self.pname = "dirFrame"
         self.dependencies.append("dirTree")
         self.dependencies.append("guiManager")
         self.dependencies.append("settings")
