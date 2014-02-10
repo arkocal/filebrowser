@@ -384,6 +384,10 @@ class DirGrid(FlexibleGrid):
         files.sort()
         for chunk in chunks(files, 10):
             for f in chunk:
+                if self.path != new_path: 
+                #This means directory has been changed while loading this one
+                #and operation should be cancelled.                
+                    return
                 w = FileWidget(f, thumbnail_size, 10, self.showPixbuf)
                 self.add(w)
                 self.show_all()
@@ -456,6 +460,7 @@ class DirFrame(plugins.Plugin):
     def onChangeDir(self, signal, *args, **kwargs):
         showHidden = self.settings["show-hidden"].value
         newPath = kwargs["newPath"]
+        self.path = newPath
         try:
             title = newPath.split("/")[-1]
         except:
@@ -464,14 +469,19 @@ class DirFrame(plugins.Plugin):
         self.cursor_at = None
         self.secondary_cursor_at = None
         self.selected = []
+        for subdirWidget in self.subdirWidgets:
+            self.holder.remove(subdirWidget)        
         spinner = Gtk.Spinner(active=True)
         self.titleBox.pack_end(spinner, False, False, 20)
         self.titleBox.show_all()
         GtkUpdate()
         self.grid.change_dir(newPath)
+        if self.path != newPath: 
+        #This means directory has been changed while loading this one
+        #and operation should be cancelled.
+            self.titleBox.remove(spinner)
+            return
         self.grids = [self.grid]
-        for subdirWidget in self.subdirWidgets:
-            self.holder.remove(subdirWidget)
         self.subdirWidgets = []
         toShow = os.listdir(newPath)
         if not showHidden:

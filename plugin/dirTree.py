@@ -192,6 +192,7 @@ class DirTree(plugins.Plugin):
         self.addResponse("change-dir", self.onChangeDir)
         self.respondAfter["started"].append("settings")
         self.respondAfter["started"].append("guiManager")
+        self.respondBefore["change-dir"].append("dirFrame")
         
     def onStart(self, signal, *args, **kwargs):
         """Creates the tree with start-path setting as root."""
@@ -246,7 +247,7 @@ class DirTree(plugins.Plugin):
                 self._scroll_to_row(row)
 
     def onChangeDir(self, signal, *args, **kwargs):
-        """Selects kwargs[“newPath”] if it is in dirTree."""
+        """Selects kwargs["newPath"] if it is in dirTree."""
         newPath = kwargs["newPath"]
         rows = self.widget.get_children()        
         if self.selectedRow is not None:
