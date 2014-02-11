@@ -355,6 +355,7 @@ class DirGrid(FlexibleGrid):
         self.manager = plugin.manager
         self.path = None
         self.showPixbuf = showPixbuf
+        self.set_can_focus(True)
 
     def on_button_press_event(self, widget, event):
         oldSelection = self.selected[:]
@@ -390,7 +391,8 @@ class DirGrid(FlexibleGrid):
                 w = FileWidget(f, thumbnail_size, 10, self.showPixbuf)
                 self.add(w)
                 self.show_all()
-                gtk_update()
+                gtk_update()       
+        self.grab_focus()
 
     def on_key_press_event(self, widget, event):
         oldSelection = self.selected[:]
@@ -401,6 +403,8 @@ class DirGrid(FlexibleGrid):
         if Gdk.keyval_name(event.keyval) == "Return":
             self.manager.raise_signal("file-activated",
                                      files=[f.path for f in self.selected])
+        elif Gdk.keyval_name(event.keyval) == "BackSpace":
+            self.manager.raise_signal("load-prev-dir")
         return True
 
 

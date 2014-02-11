@@ -210,7 +210,6 @@ class guiManager(plugins.Plugin):
             (_, y) = widget.translate_coordinates(self.leftPaneList, 0, 0)
             if "offset" in kwargs:
                 y += kwargs["offset"]
-        print(y)
         self.leftPane.get_vadjustment().set_value(y)
 
 def create_plugin(manager):

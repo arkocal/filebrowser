@@ -80,7 +80,6 @@ class Settings(plugins.Plugin):
         
     def on_request_settings(self, signal, *args, **kwargs):
         """Returns an array of settings"""
-        print ("S:", self.settings)
         return self.settings
 
     def on_set_setting(self, signal, *args, **kwargs):

@@ -11,6 +11,7 @@ class History(plugins.Plugin):
         self.dependencies.append("guiManager")
         self.add_response("started", self.on_start)
         self.add_response("change-dir", self.on_change_dir)
+        self.add_response("load-prev-dir", self._load_prev)
         self.respondBefore["started"].append("dirTree")
         
     def on_start(self, signal, *args, **kwargs):
@@ -44,7 +45,6 @@ class History(plugins.Plugin):
         if len(self.pathsLog) > self.pathsLogIndex:
             self.pathsLog[self.pathsLogIndex] = newPath
             self.pathsLog = self.pathsLog[:self.pathsLogIndex+1]
-            print(self.pathsLogIndex, self.pathsLog)
         else:
             self.pathsLog.append(newPath)
         if len(self.pathsLog) -1 > self.pathsLogIndex:
@@ -54,7 +54,9 @@ class History(plugins.Plugin):
         if self.pathsLogIndex > 0:
             self.prevButton.set_state(Gtk.StateType.NORMAL)
 
-    def _load_prev(self, _):
+    def _load_prev(self, _=None):
+        if self.pathsLogIndex == 0:
+            return
         self.pathsLogIndex -= 1
         newPath = self.pathsLog[self.pathsLogIndex]
         self.manager.raise_signal("change-dir", newPath=newPath, raisedBy=self)
@@ -64,7 +66,6 @@ class History(plugins.Plugin):
             
     def _load_next(self, _):
         self.pathsLogIndex += 1
-        print(self.pathsLog)
         newPath = self.pathsLog[self.pathsLogIndex]
         self.manager.raise_signal("change-dir", newPath=newPath, raisedBy=self)
         if self.pathsLogIndex >= len(self.pathsLog) - 1:

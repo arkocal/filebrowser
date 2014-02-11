@@ -244,10 +244,10 @@ class DirTree(plugins.Plugin):
             self.select(row)
         elif keyname == "space":
             row.toggle()
-            print (row.isToggledOn, row.children)
             if row.isToggledOn and row.children:
-                print("Scrolling to row")
                 self._scroll_to_row(row)
+        elif keyname == "BackSpace":
+            self.manager.raise_signal("load-prev-dir")
 
     def onChangeDir(self, signal, *args, **kwargs):
         """Selects kwargs["newPath"] if it is in dirTree."""
