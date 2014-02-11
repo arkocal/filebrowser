@@ -4,7 +4,6 @@ import pkgutil
 import warnings
 import pickle
 
-#import globals
 SOURCE_DIR = dirname(abspath(__file__))
 
 
@@ -14,7 +13,7 @@ class Plugin:
         plugin manager"""
 
     def __init__(self, manager):
-        """Creates plugin object."""
+        """Create plugin object."""
         self.pname = "Plugin"
         self.manager = manager
         self.dependencies = []
@@ -26,11 +25,14 @@ class Plugin:
         self.responded = False
 
     def add_response(self, signal, func):
-        """Adds response to signal.
+        """Add response to signal.
+        
         Args
             signal: signal to respond to.
             func: function to respond with. Should take signal (str), 
-            *args, **kwargs as args"""
+            *args, **kwargs as args
+        
+        """
         self.responses[signal] = func
         self.respondAfter[signal] = []
         self.respondBefore[signal] = []
@@ -68,11 +70,19 @@ class PluginManager:
                           pluginName, Warning)
 
     def raise_signal(self, signal, *args, **kwargs):
-        """Raises signal with given args."""
+        """Raise signal with given args
+        
+        Returns:
+            A dictionary with plugin names as keys
+            and return values of response functions as values.
+            
+        """
         raiseTo = self._get_plugins_to_raise_signal(signal)
+        results = {}
         for target in raiseTo:
-            target.responses[signal](signal, *args, **kwargs)
-
+            results[target.pname] = target.responses[signal](signal,
+                                                             *args, **kwargs)
+                                                             
     def _get_plugins_to_raise_signal(self, signal):
         """Returns a list of plug-ins in the order they can respond
         to signal."""
