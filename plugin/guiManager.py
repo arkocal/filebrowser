@@ -89,8 +89,7 @@ class guiManager(plugins.Plugin):
 
     def onStart(self, signal, *args, **kwargs):
         """Creates the gui"""
-        self.settings = None
-        self.manager.raise_signal("request-settings", widget=self)
+        self.settings = self.manager.raise_signal("request-settings")["settings"]
         if "min_window_size" not in self.settings.keys():
             self.manager.raise_signal("set-new-setting", 
                                      name="min_window_size",

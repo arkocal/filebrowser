@@ -199,7 +199,7 @@ class DirTree(plugins.Plugin):
         
     def onStart(self, signal, *args, **kwargs):
         """Creates the tree with start-path setting as root."""
-        self.manager.raise_signal("request-settings", widget=self)    
+        self.settings = self.manager.raise_signal("request-settings")["settings"]    
         self.widget = Gtk.ListBox()
         self.widget.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.widget.set_activate_on_single_click(False)

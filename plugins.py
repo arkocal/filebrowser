@@ -65,9 +65,6 @@ class PluginManager:
             self.plugins.append(newPlugin)
             self.pluginNames[newPlugin.pname] = newPlugin
             print("Plug-in loaded: {}".format(pluginName))
-        else:
-            warnings.warn("Failed to load plug-in %s" %
-                          pluginName, Warning)
 
     def raise_signal(self, signal, *args, **kwargs):
         """Raise signal with given args
@@ -82,6 +79,7 @@ class PluginManager:
         for target in raiseTo:
             results[target.pname] = target.responses[signal](signal,
                                                              *args, **kwargs)
+        return results    
                                                              
     def _get_plugins_to_raise_signal(self, signal):
         """Returns a list of plug-ins in the order they can respond

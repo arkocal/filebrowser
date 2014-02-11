@@ -79,9 +79,9 @@ class Settings(plugins.Plugin):
             self.settings = {} 
         
     def on_request_settings(self, signal, *args, **kwargs):
-        """Sets kwargs["widget"].settings to self."""
-        widget = kwargs["widget"]
-        widget.settings = self.settings
+        """Returns an array of settings"""
+        print ("S:", self.settings)
+        return self.settings
 
     def on_set_setting(self, signal, *args, **kwargs):
         """Sets kwargs["setting"] to kwargs["newValue"]

@@ -275,7 +275,6 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
             self.selected.append(widget)
             widget.set_can_focus(True)
             widget.grab_focus()
-            print("Grabbe")
         self.update_selection(selected_old)
         if selected_old != self.selected:
             self.plugin.deselectAllBut(self)
@@ -428,7 +427,7 @@ class DirFrame(plugins.Plugin):
 
     def onStart(self, signal, *args, **kwargs):
         """Create the frame unpopulated."""
-        self.manager.raise_signal("request-settings", widget=self)
+        self.settings = self.manager.raise_signal("request-settings")["settings"]
         if "thumbnail-size" not in self.settings.keys():
             self.manager.raise_signal("set-new-setting", name="thumbnail-size",
                                      setting=ThumbnailSizeSetting())
