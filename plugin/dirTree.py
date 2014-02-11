@@ -242,7 +242,7 @@ class DirTree(plugins.Plugin):
             self._scroll_to_row(row)
             self.select(row)
         elif event.type == Gdk.EventType.BUTTON_PRESS:
-            row.toggle()
+            GLib.timeout_add(250, row.toggle)
         if row.isToggledOn and row.children:
             GLib.timeout_add(250, self._scroll_to_row, row)
 
