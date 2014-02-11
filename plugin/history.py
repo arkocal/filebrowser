@@ -2,7 +2,9 @@ from gi.repository import Gtk
 
 import plugins
 
+
 class History(plugins.Plugin):
+
     def __init__(self, manager):
         plugins.Plugin.__init__(self, manager)
         self.pname = "history"
@@ -13,7 +15,7 @@ class History(plugins.Plugin):
         self.add_response("change-dir", self.on_change_dir)
         self.add_response("load-prev-dir", self._load_prev)
         self.respondBefore["started"].append("dirTree")
-        
+
     def on_start(self, signal, *args, **kwargs):
         self.pathsLog = []
         self.pathsLogIndex = -1
@@ -32,8 +34,8 @@ class History(plugins.Plugin):
         self.widget.add(self.prevButton)
         self.widget.add(self.nextButton)
         self.widget.show()
-        self.manager.raise_signal("request-place-header", widget = self.widget,
-                                 side="left")
+        self.manager.raise_signal("request-place-header", widget=self.widget,
+                                  side="left")
 
     def on_change_dir(self, signal, *args, **kwargs):
         if "raisedBy" in kwargs:
@@ -44,10 +46,10 @@ class History(plugins.Plugin):
         self.pathsLogIndex += 1
         if len(self.pathsLog) > self.pathsLogIndex:
             self.pathsLog[self.pathsLogIndex] = newPath
-            self.pathsLog = self.pathsLog[:self.pathsLogIndex+1]
+            self.pathsLog = self.pathsLog[:self.pathsLogIndex + 1]
         else:
             self.pathsLog.append(newPath)
-        if len(self.pathsLog) -1 > self.pathsLogIndex:
+        if len(self.pathsLog) - 1 > self.pathsLogIndex:
             self.nextButton.set_state(Gtk.StateType.NORMAL)
         else:
             self.nextButton.set_state(Gtk.StateType.INSENSITIVE)
@@ -63,7 +65,7 @@ class History(plugins.Plugin):
         if self.pathsLogIndex == 0:
             self.prevButton.set_state(Gtk.StateType.INSENSITIVE)
         self.nextButton.set_state(Gtk.StateType.NORMAL)
-            
+
     def _load_next(self, _):
         self.pathsLogIndex += 1
         newPath = self.pathsLog[self.pathsLogIndex]
@@ -71,7 +73,7 @@ class History(plugins.Plugin):
         if self.pathsLogIndex >= len(self.pathsLog) - 1:
             self.nextButton.set_state(Gtk.StateType.INSENSITIVE)
         self.prevButton.set_state(Gtk.StateType.NORMAL)
-        
+
 
 def create_plugin(manager):
     """Creates an instance of History"""

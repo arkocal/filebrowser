@@ -157,21 +157,21 @@ class FileWidget(Gtk.Box):
         self.path = path
         (_, self.fname) = os.path.split(path)
         self.label = Gtk.Label(self.fname)
-        self.label.set_ellipsize(Pango.EllipsizeMode.END)        
+        self.label.set_ellipsize(Pango.EllipsizeMode.END)
         self.label.set_margin_left(margin)
         self.label.set_margin_right(margin)
         if showPixbuf:
-            self.label.set_lines(3)        
+            self.label.set_lines(3)
             self.label.set_single_line_mode(False)
             self.label.set_line_wrap(True)
-            self.label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)        
-            self.label.set_justify(Gtk.Justification.CENTER)        
+            self.label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            self.label.set_justify(Gtk.Justification.CENTER)
             thumbnail = getThumbnail(self.path, size)
             self.image = Gtk.Image()
             if thumbnail is not None:
                 self.image.set_from_pixbuf(thumbnail)
                 height = thumbnail.get_height()
-            self.pack_start(self.image, False, False, 5 + (size-height)/2)
+            self.pack_start(self.image, False, False, 5 + (size - height) / 2)
         else:
             self.label.set_alignment(0, 0.5)
         if showPixbuf:
@@ -368,10 +368,10 @@ class DirGrid(FlexibleGrid):
             FlexibleGrid.on_button_press_event(self, widget, event)
             if self.selected[:] != oldSelection:
                 self.manager.raise_signal("file-selected",
-                                         files=[f.path for f in self.selected])
+                                          files=[f.path for f in self.selected])
         elif event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
             self.manager.raise_signal("file-activated",
-                                     files=[f.path for f in self.selected])
+                                      files=[f.path for f in self.selected])
         return True
 
     def change_dir(self, new_path):
@@ -389,14 +389,14 @@ class DirGrid(FlexibleGrid):
         files.sort()
         for chunk in chunks(files, 10):
             for f in chunk:
-                if self.path != new_path: 
-                #This means directory has been changed while loading this one
-                #and operation should be cancelled.                
+                if self.path != new_path:
+                # This means directory has been changed while loading this one
+                # and operation should be cancelled.
                     return
                 w = FileWidget(f, thumbnail_size, 10, self.showPixbuf)
                 self.add(w)
                 self.show_all()
-                gtk_update()       
+                gtk_update()
         self.grab_focus()
 
     def on_key_press_event(self, widget, event):
@@ -404,10 +404,10 @@ class DirGrid(FlexibleGrid):
         FlexibleGrid.on_key_press_event(self, widget, event)
         if self.selected[:] != oldSelection:
             self.manager.raise_signal("file-selected",
-                                     files=[f.path for f in self.selected])
+                                      files=[f.path for f in self.selected])
         if Gdk.keyval_name(event.keyval) == "Return":
             self.manager.raise_signal("file-activated",
-                                     files=[f.path for f in self.selected])
+                                      files=[f.path for f in self.selected])
         elif Gdk.keyval_name(event.keyval) == "BackSpace":
             self.manager.raise_signal("load-prev-dir")
         return True
@@ -436,10 +436,11 @@ class DirFrame(plugins.Plugin):
 
     def onStart(self, signal, *args, **kwargs):
         """Create the frame unpopulated."""
-        self.settings = self.manager.raise_signal("request-settings")["settings"]
+        self.settings = self.manager.raise_signal(
+            "request-settings")["settings"]
         if "thumbnail-size" not in self.settings.keys():
             self.manager.raise_signal("set-new-setting", name="thumbnail-size",
-                                     setting=ThumbnailSizeSetting())
+                                      setting=ThumbnailSizeSetting())
         self.thumbnailSize = self.settings["thumbnail-size"].value
         self.spacing = 30
         self.path = None
@@ -478,15 +479,15 @@ class DirFrame(plugins.Plugin):
         self.secondary_cursor_at = None
         self.selected = []
         for subdirWidget in self.subdirWidgets:
-            self.holder.remove(subdirWidget)        
+            self.holder.remove(subdirWidget)
         spinner = Gtk.Spinner(active=True)
         self.titleBox.pack_end(spinner, False, False, 20)
         self.titleBox.show_all()
         gtk_update()
         self.grid.change_dir(newPath)
-        if self.path != newPath: 
-        #This means directory has been changed while loading this one
-        #and operation should be cancelled.
+        if self.path != newPath:
+        # This means directory has been changed while loading this one
+        # and operation should be cancelled.
             self.titleBox.remove(spinner)
             return
         self.grids = [self.grid]

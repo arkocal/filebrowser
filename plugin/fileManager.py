@@ -3,27 +3,29 @@ import platform
 
 import plugins
 
+
 class FileManager(plugins.Plugin):
-    
+
     def __init__(self, manager):
         plugins.Plugin.__init__(self, manager)
         self.pname = "fileManager"
         self.add_response("started", self.onStart)
         self.add_response("file-activated", self.onFileActivated)
-    
+
     def onStart(self, signal, *args, **kwargs):
-        self.system = platform.system()    
-    
+        self.system = platform.system()
+
     def onFileActivated(self, signal, *args, **kwargs):
         files = kwargs["files"]
-        systemOpen = {"Linux":"xdg-open", "Windows":"open", "Darwin":"start"}
-        if "app"  in kwargs.keys():
+        systemOpen = {
+            "Linux": "xdg-open", "Windows": "open", "Darwin": "start"}
+        if "app" in kwargs.keys():
             app = kwargs["app"]
         else:
             app = systemOpen[self.system]
         for f in files:
             os.system('{} "{}"'.format(app, f))
-    
-    
+
+
 def create_plugin(manager):
     return FileManager(manager)

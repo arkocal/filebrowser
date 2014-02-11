@@ -14,9 +14,11 @@ from gi.repository import Gtk, Gdk
 import plugin.settings as settings
 import plugins
 
+
 class LeftPaneWidthSetting(settings.Setting):
+
     """Setting for left pane width."""
-    
+
     def __init__(self):
         """Creates a LeftPaneWidthSetting object."""
         settings.Setting.__init__(self)
@@ -28,12 +30,14 @@ class LeftPaneWidthSetting(settings.Setting):
             return (type(value) is int) and (0 < value < 60000)
         except:
             return False
-            
+
     def setToDefault(self):
         """ Sets left pane width to default."""
         self.set(240)
 
+
 class WindowSizeSetting(settings.Setting):
+
     """Setting for window size. Value is tuple (width, height)"""
 
     def __init__(self):
@@ -47,13 +51,15 @@ class WindowSizeSetting(settings.Setting):
             return ((0 < value[0] < 60000) and
                     (0 < value[1] < 60000))
         except:
-           return False
-            
+            return False
+
     def setToDefault(self):
         """ Sets window size to default."""
-        self.set((650,480))
+        self.set((650, 480))
+
 
 class guiManager(plugins.Plugin):
+
     """guiManager creates a Gtk.Main window with a left pane
        (Gtk.ScrolledWindow), center area (Gtk.Stack) and a Gtk.HeaderBar.
        On request, guiManager places Widgets created by other plug-ins
@@ -75,67 +81,67 @@ class guiManager(plugins.Plugin):
         self.dependencies.append("settings")
         self.add_response("started", self.onStart)
         self.add_response("request-place-left-pane",
-                         self.onLeftPanePlaceRequest)
+                          self.onLeftPanePlaceRequest)
         self.add_response("request-place-center", self.onCenterPlaceRequest)
         self.add_response("request-place-header", self.onHeaderPlaceRequest)
         self.add_response("request-remove-left-pane",
-                         self.onLeftPaneRemoveRequest)
+                          self.onLeftPaneRemoveRequest)
         self.add_response("request-remove-center", self.onCenterRemoveRequest)
-        self.add_response("request-remove-header", 
-                         self.onHeaderRemoveRequest)
+        self.add_response("request-remove-header",
+                          self.onHeaderRemoveRequest)
         self.add_response("request-scroll", self.onScrollRequest)
         self.add_response("change-dir", self.onChangeDir)
         self.respondAfter["started"].append("settings")
 
     def onStart(self, signal, *args, **kwargs):
         """Creates the gui"""
-        self.settings = self.manager.raise_signal("request-settings")["settings"]
+        self.settings = self.manager.raise_signal(
+            "request-settings")["settings"]
         if "min_window_size" not in self.settings.keys():
-            self.manager.raise_signal("set-new-setting", 
-                                     name="min_window_size",
-                                     setting = WindowSizeSetting())
+            self.manager.raise_signal("set-new-setting",
+                                      name="min_window_size",
+                                      setting=WindowSizeSetting())
         if "pane_width" not in self.settings.keys():
-            self.manager.raise_signal("set-new-setting", 
-                                     name="pane_width",
-                                     setting = LeftPaneWidthSetting())        
+            self.manager.raise_signal("set-new-setting",
+                                      name="pane_width",
+                                      setting=LeftPaneWidthSetting())
         (MIN_WIDTH, MIN_HEIGHT) = self.settings["min_window_size"].value
         LEFT_PANE_WIDTH = self.settings["pane_width"].value
-            
-        
+
         self.window = Gtk.Window()
         self.window.set_size_request(MIN_WIDTH, MIN_HEIGHT)
         self.window.connect("delete-event", Gtk.main_quit)
-        self.window.add_events(Gdk.EventMask.KEY_PRESS_MASK)        
-        self.window.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)        
-        
+        self.window.add_events(Gdk.EventMask.KEY_PRESS_MASK)
+        self.window.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+
         self.headerBar = Gtk.HeaderBar()
         self.headerBar.props.show_close_button = True
         self.headerBar.set_title("File Browser")
         self.window.set_titlebar(self.headerBar)
-        
+
         box = Gtk.Box(homogeneous=False)
-        
+
         never = Gtk.PolicyType.NEVER
-        self.leftPane = Gtk.ScrolledWindow(hscrollbar_policy = never)
+        self.leftPane = Gtk.ScrolledWindow(hscrollbar_policy=never)
         self.leftPane.set_size_request(LEFT_PANE_WIDTH, 0)
         self.leftPaneList = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.leftPaneList.modify_bg(0, Gdk.Color.parse("#f3f3f3")[1])
         self.leftPane.add(self.leftPaneList)
-            
+
         self.centerStack = Gtk.Stack()
         self.centerStack.set_homogeneous(False)
         transition = Gtk.StackTransitionType.SLIDE_LEFT_RIGHT
         self.centerStack.set_transition_type(transition)
         self.centerStack.set_transition_duration(400)
-        
+
         box.pack_start(self.leftPane, False, False, 0)
         box.pack_start(self.centerStack, True, True, 0)
-        
-        self.window.add(box)        
+
+        self.window.add(box)
         self.window.show_all()
 
     def onLeftPanePlaceRequest(self, signal, *args, **kwargs):
-        """Places kwargs["widget"] on kwargs["side"] of leftPane, 
+        """Places kwargs["widget"] on kwargs["side"] of leftPane,
         kwargs["side"] being "top" or "bottom" with "top" as default."""
         widget = kwargs["widget"]
         if "side" in kwargs.keys():
@@ -149,18 +155,18 @@ class guiManager(plugins.Plugin):
         else:
             self.leftPaneList.pack_start(widget, False, False, 0)
         self.leftPaneList.show_all()
-        
+
     def onCenterPlaceRequest(self, signal, *args, **kwargs):
-        """Places kwargs["widget"] on kwargs["side"] of center, 
-        kwargs["side"] being "top" or "bottom" with "top" as default.""" 
+        """Places kwargs["widget"] on kwargs["side"] of center,
+        kwargs["side"] being "top" or "bottom" with "top" as default."""
         widget = kwargs["widget"]
         self.centerStack.add(widget)
         self.centerStack.show_all()
         self.centerStack.set_visible_child(widget)
 
     def onHeaderPlaceRequest(self, signal, *args, **kwargs):
-        """Places kwargs["widget"] on kwargs["side"] of headerBar, 
-        kwargs["side"] being "left", "start", "right" or "end"."""    
+        """Places kwargs["widget"] on kwargs["side"] of headerBar,
+        kwargs["side"] being "left", "start", "right" or "end"."""
         widget = kwargs["widget"]
         if "side" in kwargs.keys():
             side = kwargs["side"]
@@ -173,24 +179,24 @@ class guiManager(plugins.Plugin):
                                  ", 'end' or 'right")
         else:
             raise ValueError("side must be 'left', 'start', 'end' or 'right")
-        self.headerBar.show_all()         
+        self.headerBar.show_all()
 
     def onLeftPaneRemoveRequest(self, signal, *args, **kwargs):
         """Removes kwargs["widget"] from leftPane."""
         widget = kwargs["widget"]
         self.leftPane.remove(widget)
-        
+
     def onCenterRemoveRequest(self, signal, *args, **kwargs):
-        """Removes kwargs["widget"] from center and sets last visible 
+        """Removes kwargs["widget"] from center and sets last visible
         child visible again."""
         widget = kwargs["widget"]
         if self.centerStack.get_visible_child() == widget:
             children = self.centerStack.get_children()
             i = children.index(widget)
             if i > 0 or len(children) > 1:
-                self.centerStack.set_visible_child(children[i-1])
+                self.centerStack.set_visible_child(children[i - 1])
         self.centerStack.remove(widget)
-        
+
     def onHeaderRemoveRequest(self, signal, *args, **kwargs):
         """Removes kwargs["widget"] from headerBar."""
         widget = kwargs["widget"]
@@ -211,6 +217,7 @@ class guiManager(plugins.Plugin):
             if "offset" in kwargs:
                 y += kwargs["offset"]
         self.leftPane.get_vadjustment().set_value(y)
+
 
 def create_plugin(manager):
     """Creates an instance of guiManager"""
