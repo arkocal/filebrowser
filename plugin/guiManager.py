@@ -36,9 +36,9 @@ class LeftPaneWidthSetting(settings.Setting):
         self.set(240)
 
 
-class WindowSizeSetting(settings.Setting):
+class WindowGeoSetting(settings.Setting):
 
-    """Setting for window size. Value is tuple (width, height)"""
+    """Setting for window size or position. Value is tuple (width, height)"""
 
     def __init__(self):
         """Creates a WindowSizeSetting object."""
@@ -48,8 +48,8 @@ class WindowSizeSetting(settings.Setting):
     def _is_valid_value(self, value):
         """Returns if value is a valid (width, height) tuple"""
         try:
-            return ((0 < value[0] < 60000) and
-                    (0 < value[1] < 60000))
+            return ((0 <= value[0] < 60000) and
+                    (0 <= value[1] < 60000))
         except:
             return False
 
@@ -100,17 +100,32 @@ class guiManager(plugins.Plugin):
         if "min_window_size" not in self.settings.keys():
             self.manager.raise_signal("set-new-setting",
                                       name="min_window_size",
-                                      setting=WindowSizeSetting())
+                                      setting=WindowGeoSetting())
+        if "window_size" not in self.settings.keys():
+            self.manager.raise_signal("set-new-setting",
+                                      name="window_size",
+                                      setting=WindowGeoSetting())
+        if "window_position" not in self.settings.keys():
+            setting = WindowGeoSetting()
+            setting.set((1,1))
+            self.manager.raise_signal("set-new-setting",
+                                      name="window_position",
+                                      setting=setting)        
         if "pane_width" not in self.settings.keys():
             self.manager.raise_signal("set-new-setting",
                                       name="pane_width",
                                       setting=LeftPaneWidthSetting())
-        (MIN_WIDTH, MIN_HEIGHT) = self.settings["min_window_size"].value
-        LEFT_PANE_WIDTH = self.settings["pane_width"].value
+        (minWindowWidth, minWindowHeight) = self.settings[
+            "min_window_size"].value
+        (windowWidth, windowHeight) = self.settings["window_size"].value
+        (windowPosX, windowPosY) = self.settings["window_position"].value
+        leftPaneWidth = self.settings["pane_width"].value
 
         self.window = Gtk.Window()
-        self.window.set_size_request(MIN_WIDTH, MIN_HEIGHT)
-        self.window.connect("delete-event", Gtk.main_quit)
+        self.window.set_size_request(minWindowWidth, minWindowHeight)
+        self.window.resize(windowWidth, windowHeight)
+        self.window.move(windowPosX, windowPosY)
+        self.window.connect("delete-event", self.quit)
         self.window.add_events(Gdk.EventMask.KEY_PRESS_MASK)
         self.window.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
 
@@ -123,7 +138,7 @@ class guiManager(plugins.Plugin):
 
         never = Gtk.PolicyType.NEVER
         self.leftPane = Gtk.ScrolledWindow(hscrollbar_policy=never)
-        self.leftPane.set_size_request(LEFT_PANE_WIDTH, 0)
+        self.leftPane.set_size_request(leftPaneWidth, 0)
         self.leftPaneList = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.leftPaneList.modify_bg(0, Gdk.Color.parse("#f3f3f3")[1])
         self.leftPane.add(self.leftPaneList)
@@ -218,6 +233,14 @@ class guiManager(plugins.Plugin):
                 y += kwargs["offset"]
         self.leftPane.get_vadjustment().set_value(y)
 
+    def quit(self, window=None, event=None):
+        size = window.get_size()
+        pos = window.get_position()
+        self.manager.raise_signal("set-setting", setting="window_size",
+                                  newValue=size)
+        self.manager.raise_signal("set-setting", setting="window_position",
+                                  newValue=pos)
+        Gtk.main_quit()
 
 def create_plugin(manager):
     """Creates an instance of guiManager"""

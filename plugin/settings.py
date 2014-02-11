@@ -91,7 +91,7 @@ class Settings(plugins.Plugin):
     def on_set_setting(self, signal, *args, **kwargs):
         """Sets kwargs["setting"] to kwargs["newValue"]
         if kwargs["newValue"] is valid. Saves changes to disk."""
-        setting = kwargs["setting"]
+        setting = self.settings[kwargs["setting"]]
         newValue = kwargs["newValue"]
         setting.set(newValue)
         self._save()
