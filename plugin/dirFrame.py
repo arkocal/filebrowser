@@ -13,7 +13,7 @@ import plugin.settings as settings
 import plugins
 
 
-def GtkUpdate():
+def gtk_update():
     while Gtk.events_pending():
         Gtk.main_iteration()
 
@@ -133,7 +133,7 @@ class ThumbnailSizeSetting(settings.Setting):
         settings.Setting.__init__(self)
         self.setToDefault()
 
-    def isValidValue(self, value):
+    def _is_valid_value(self, value):
         """Returns whether value is a valid size."""
         try:
             return (type(value) is int) and (0 < value < 60000)
@@ -362,10 +362,10 @@ class DirGrid(FlexibleGrid):
         if event.type == Gdk.EventType.BUTTON_PRESS:
             FlexibleGrid.on_button_press_event(self, widget, event)
             if self.selected[:] != oldSelection:
-                self.manager.raiseSignal("file-selected",
+                self.manager.raise_signal("file-selected",
                                          files=[f.path for f in self.selected])
         elif event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
-            self.manager.raiseSignal("file-activated",
+            self.manager.raise_signal("file-activated",
                                      files=[f.path for f in self.selected])
         return True
 
@@ -391,16 +391,16 @@ class DirGrid(FlexibleGrid):
                 w = FileWidget(f, thumbnail_size, 10, self.showPixbuf)
                 self.add(w)
                 self.show_all()
-                GtkUpdate()
+                gtk_update()
 
     def on_key_press_event(self, widget, event):
         oldSelection = self.selected[:]
         FlexibleGrid.on_key_press_event(self, widget, event)
         if self.selected[:] != oldSelection:
-            self.manager.raiseSignal("file-selected",
+            self.manager.raise_signal("file-selected",
                                      files=[f.path for f in self.selected])
         if Gdk.keyval_name(event.keyval) == "Return":
-            self.manager.raiseSignal("file-activated",
+            self.manager.raise_signal("file-activated",
                                      files=[f.path for f in self.selected])
         return True
 
@@ -418,19 +418,19 @@ class DirFrame(plugins.Plugin):
         self.dependencies.append("dirTree")
         self.dependencies.append("guiManager")
         self.dependencies.append("settings")
-        self.addResponse("started", self.onStart)
-       # self.addResponse("file-select", self.onFileSelect)
-       # self.addResponse("file-activate", self.onFileActivate)
-        self.addResponse("change-dir", self.onChangeDir)
+        self.add_response("started", self.onStart)
+       # self.add_response("file-select", self.onFileSelect)
+       # self.add_response("file-activate", self.onFileActivate)
+        self.add_response("change-dir", self.onChangeDir)
         self.respondBefore["started"].append("dirTree")
         self.respondAfter["started"].append("guiManager")
         self.respondAfter["started"].append("settings")
 
     def onStart(self, signal, *args, **kwargs):
         """Create the frame unpopulated."""
-        self.manager.raiseSignal("request-settings", widget=self)
+        self.manager.raise_signal("request-settings", widget=self)
         if "thumbnail-size" not in self.settings.keys():
-            self.manager.raiseSignal("set-new-setting", name="thumbnail-size",
+            self.manager.raise_signal("set-new-setting", name="thumbnail-size",
                                      setting=ThumbnailSizeSetting())
         self.thumbnailSize = self.settings["thumbnail-size"].value
         self.spacing = 30
@@ -453,7 +453,7 @@ class DirFrame(plugins.Plugin):
         self.holder.add(separator)
         self.holder.add(self.grid)
         self.scroll.add(self.holder)
-        self.manager.raiseSignal("request-place-center", widget=self.scroll)
+        self.manager.raise_signal("request-place-center", widget=self.scroll)
         self.grid.show()
         self.subdirWidgets = []
 
@@ -474,7 +474,7 @@ class DirFrame(plugins.Plugin):
         spinner = Gtk.Spinner(active=True)
         self.titleBox.pack_end(spinner, False, False, 20)
         self.titleBox.show_all()
-        GtkUpdate()
+        gtk_update()
         self.grid.change_dir(newPath)
         if self.path != newPath: 
         #This means directory has been changed while loading this one
@@ -545,5 +545,5 @@ class DirFrame(plugins.Plugin):
                 grid.deselect_all()
 
 
-def createPlugin(manager):
+def create_plugin(manager):
     return DirFrame(manager)

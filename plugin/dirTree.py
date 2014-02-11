@@ -6,7 +6,9 @@ import cairo
 import plugin.settings as settings
 import plugins
 
-def GtkUpdate():
+def gtk_update():
+    """Updates GUI. Call this when a function needs so long
+    that GUI becomes irresponsive."""
     while Gtk.events_pending():
         Gtk.main_iteration()
 
@@ -17,8 +19,9 @@ def isHidden(path):
 
 def breakPath(path):
     """ Breaks path into an array. 
-    Example: path= /home/anon/Documents returns:
-    ["home", "anon", "Documents"].
+    Example:
+        >>> breakPath("/home/anon/Documents")
+            ["home", "anon", "Documents"]
     This is different from path.split("/") as it is cross platform"""    
     #TODO test on windows
     (head, tail) = os.path.split(path)
@@ -90,11 +93,11 @@ class DirRow(Gtk.ListBoxRow):
         (_, self.display) = os.path.split(path)
         self.display = self.depth*"  " + self.display
         if "dir-row-height" not in self.plugin.settings.keys():
-            self.plugin.manager.raiseSignal("set-new-setting",
+            self.plugin.manager.raise_signal("set-new-setting",
                                           setting = DirRowHeightSetting(),
                                           name="dir-row-height")
         if "show-hidden" not in self.plugin.settings.keys():
-            self.plugin.manager.raiseSignal("set-new-setting",
+            self.plugin.manager.raise_signal("set-new-setting",
                                             setting=settings.BooleanSetting(),
                                             name="show-hidden")
         height = self.plugin.settings["dir-row-height"].value
@@ -188,26 +191,26 @@ class DirTree(plugins.Plugin):
         self.pname = "dirTree"
         self.dependencies.append("settings")     
         self.dependencies.append("guiManager")   
-        self.addResponse("started", self.onStart)
-        self.addResponse("change-dir", self.onChangeDir)
+        self.add_response("started", self.onStart)
+        self.add_response("change-dir", self.onChangeDir)
         self.respondAfter["started"].append("settings")
         self.respondAfter["started"].append("guiManager")
         self.respondBefore["change-dir"].append("dirFrame")
         
     def onStart(self, signal, *args, **kwargs):
         """Creates the tree with start-path setting as root."""
-        self.manager.raiseSignal("request-settings", widget=self)    
+        self.manager.raise_signal("request-settings", widget=self)    
         self.widget = Gtk.ListBox()
         self.widget.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.widget.set_activate_on_single_click(False)
         self.widget.connect("button-press-event", self.onMouseEvent)
         self.selectedRow = None
-        self.manager.raiseSignal("request-place-left-pane", widget=self.widget)
+        self.manager.raise_signal("request-place-left-pane", widget=self.widget)
         if "start-path" not in self.settings.keys():
-            self.manager.raiseSignal("set-new-setting", name="start-path",
+            self.manager.raise_signal("set-new-setting", name="start-path",
                                      setting = StartPathSetting())
         if "show-hidden " not in self.settings.keys():
-            self.manager.raiseSignal("set-new-setting", name="show-hidden",
+            self.manager.raise_signal("set-new-setting", name="show-hidden",
                                      setting = settings.BooleanSetting())
         startpath = self.settings["start-path"].value
         self.root = startpath
@@ -215,7 +218,7 @@ class DirTree(plugins.Plugin):
         self.widget.add(row)
         row.toggle()
         self.widget.show_all()  
-        self.manager.raiseSignal("change-dir", newPath = startpath)
+        self.manager.raise_signal("change-dir", newPath = startpath)
         
     def onMouseEvent(self, widget, event):
         """Responds to button press events.
@@ -289,13 +292,13 @@ class DirTree(plugins.Plugin):
             self.selectedRow.deselect()
         self.selectedRow = row
         row.select()
-        self.manager.raiseSignal("change-dir", newPath = row.path)
+        self.manager.raise_signal("change-dir", newPath = row.path)
 
     def _scroll_to_row(self, row):
-        GtkUpdate()
+        gtk_update()
         offset = -row.get_allocated_height()
-        self.manager.raiseSignal("request-scroll", widget=row, offset=offset)
+        self.manager.raise_signal("request-scroll", widget=row, offset=offset)
         return False     
                
-def createPlugin(manager):
+def create_plugin(manager):
     return DirTree(manager)

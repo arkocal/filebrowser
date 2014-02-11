@@ -8,8 +8,8 @@ class FileManager(plugins.Plugin):
     def __init__(self, manager):
         plugins.Plugin.__init__(self, manager)
         self.pname = "fileManager"
-        self.addResponse("started", self.onStart)
-        self.addResponse("file-activated", self.onFileActivated)
+        self.add_response("started", self.onStart)
+        self.add_response("file-activated", self.onFileActivated)
     
     def onStart(self, signal, *args, **kwargs):
         self.system = platform.system()    
@@ -25,5 +25,5 @@ class FileManager(plugins.Plugin):
             os.system('{} "{}"'.format(app, f))
     
     
-def createPlugin(manager):
+def create_plugin(manager):
     return FileManager(manager)

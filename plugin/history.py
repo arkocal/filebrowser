@@ -7,13 +7,13 @@ class History(plugins.Plugin):
         plugins.Plugin.__init__(self, manager)
         self.pname = "history"
         self.dependencies.append("settings")
-        self.dependencies.append("dirTree")        
+        self.dependencies.append("dirTree")
         self.dependencies.append("guiManager")
-        self.addResponse("started", self.onStart)
-        self.addResponse("change-dir", self.onChangeDir)
+        self.add_response("started", self.on_start)
+        self.add_response("change-dir", self.on_change_dir)
         self.respondBefore["started"].append("dirTree")
         
-    def onStart(self, signal, *args, **kwargs):
+    def on_start(self, signal, *args, **kwargs):
         self.pathsLog = []
         self.pathsLogIndex = -1
         prev = Gtk.Image()
@@ -24,17 +24,17 @@ class History(plugins.Plugin):
         self.nextButton = Gtk.Button(None, image=next)
         self.prevButton.set_state(Gtk.StateType.INSENSITIVE)
         self.nextButton.set_state(Gtk.StateType.INSENSITIVE)
-        self.prevButton.connect("clicked", self.prev)
-        self.nextButton.connect("clicked", self.next)
+        self.prevButton.connect("clicked", self._load_prev)
+        self.nextButton.connect("clicked", self._load_next)
         self.widget = Gtk.Box()
         Gtk.StyleContext.add_class(self.widget.get_style_context(), "linked")
         self.widget.add(self.prevButton)
         self.widget.add(self.nextButton)
         self.widget.show()
-        self.manager.raiseSignal("request-place-header", widget = self.widget,
+        self.manager.raise_signal("request-place-header", widget = self.widget,
                                  side="left")
 
-    def onChangeDir(self, signal, *args, **kwargs):
+    def on_change_dir(self, signal, *args, **kwargs):
         if "raisedBy" in kwargs:
             raisedBy = kwargs["raisedBy"]
             if raisedBy == self:
@@ -54,23 +54,24 @@ class History(plugins.Plugin):
         if self.pathsLogIndex > 0:
             self.prevButton.set_state(Gtk.StateType.NORMAL)
 
-    def prev(self, _):
+    def _load_prev(self, _):
         self.pathsLogIndex -= 1
         newPath = self.pathsLog[self.pathsLogIndex]
-        self.manager.raiseSignal("change-dir", newPath=newPath, raisedBy=self)
+        self.manager.raise_signal("change-dir", newPath=newPath, raisedBy=self)
         if self.pathsLogIndex == 0:
             self.prevButton.set_state(Gtk.StateType.INSENSITIVE)
         self.nextButton.set_state(Gtk.StateType.NORMAL)
             
-    def next(self, _):
+    def _load_next(self, _):
         self.pathsLogIndex += 1
         print(self.pathsLog)
         newPath = self.pathsLog[self.pathsLogIndex]
-        self.manager.raiseSignal("change-dir", newPath=newPath, raisedBy=self)
+        self.manager.raise_signal("change-dir", newPath=newPath, raisedBy=self)
         if self.pathsLogIndex >= len(self.pathsLog) - 1:
             self.nextButton.set_state(Gtk.StateType.INSENSITIVE)
         self.prevButton.set_state(Gtk.StateType.NORMAL)
         
 
-def createPlugin(manager):
+def create_plugin(manager):
+    """Creates an instance of History"""
     return History(manager)

@@ -22,7 +22,7 @@ class LeftPaneWidthSetting(settings.Setting):
         settings.Setting.__init__(self)
         self.setToDefault()
 
-    def isValidValue(self, value):
+    def _is_valid_value(self, value):
         """Returns whether value is a valid width."""
         try:
             return (type(value) is int) and (0 < value < 60000)
@@ -41,7 +41,7 @@ class WindowSizeSetting(settings.Setting):
         settings.Setting.__init__(self)
         self.setToDefault()
 
-    def isValidValue(self, value):
+    def _is_valid_value(self, value):
         """Returns if value is a valid (width, height) tuple"""
         try:
             return ((0 < value[0] < 60000) and
@@ -73,30 +73,30 @@ class guiManager(plugins.Plugin):
         plugins.Plugin.__init__(self, manager)
         self.pname = "guiManager"
         self.dependencies.append("settings")
-        self.addResponse("started", self.onStart)
-        self.addResponse("request-place-left-pane",
+        self.add_response("started", self.onStart)
+        self.add_response("request-place-left-pane",
                          self.onLeftPanePlaceRequest)
-        self.addResponse("request-place-center", self.onCenterPlaceRequest)
-        self.addResponse("request-place-header", self.onHeaderPlaceRequest)
-        self.addResponse("request-remove-left-pane",
+        self.add_response("request-place-center", self.onCenterPlaceRequest)
+        self.add_response("request-place-header", self.onHeaderPlaceRequest)
+        self.add_response("request-remove-left-pane",
                          self.onLeftPaneRemoveRequest)
-        self.addResponse("request-remove-center", self.onCenterRemoveRequest)
-        self.addResponse("request-remove-header", 
+        self.add_response("request-remove-center", self.onCenterRemoveRequest)
+        self.add_response("request-remove-header", 
                          self.onHeaderRemoveRequest)
-        self.addResponse("request-scroll", self.onScrollRequest)
-        self.addResponse("change-dir", self.onChangeDir)
+        self.add_response("request-scroll", self.onScrollRequest)
+        self.add_response("change-dir", self.onChangeDir)
         self.respondAfter["started"].append("settings")
 
     def onStart(self, signal, *args, **kwargs):
         """Creates the gui"""
         self.settings = None
-        self.manager.raiseSignal("request-settings", widget=self)
+        self.manager.raise_signal("request-settings", widget=self)
         if "min_window_size" not in self.settings.keys():
-            self.manager.raiseSignal("set-new-setting", 
+            self.manager.raise_signal("set-new-setting", 
                                      name="min_window_size",
                                      setting = WindowSizeSetting())
         if "pane_width" not in self.settings.keys():
-            self.manager.raiseSignal("set-new-setting", 
+            self.manager.raise_signal("set-new-setting", 
                                      name="pane_width",
                                      setting = LeftPaneWidthSetting())        
         (MIN_WIDTH, MIN_HEIGHT) = self.settings["min_window_size"].value
@@ -214,6 +214,6 @@ class guiManager(plugins.Plugin):
         print(y)
         self.leftPane.get_vadjustment().set_value(y)
 
-def createPlugin(manager):
+def create_plugin(manager):
     """Creates an instance of guiManager"""
     return guiManager(manager)

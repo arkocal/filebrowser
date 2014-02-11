@@ -25,11 +25,12 @@ class Plugin:
         self.id = -1
         self.responded = False
 
-    def addResponse(self, signal, func):
+    def add_response(self, signal, func):
         """Adds response to signal.
         Args
             signal: signal to respond to.
-            func: function to respond with."""
+            func: function to respond with. Should take signal (str), 
+            *args, **kwargs as args"""
         self.responses[signal] = func
         self.respondAfter[signal] = []
         self.respondBefore[signal] = []
@@ -45,28 +46,10 @@ class PluginManager:
 
     def __init__(self):
         """ Initializes PluginManager"""
-        self.getPluginsList()
-        self.loadPlugins()
-        self.raiseSignal("started")
+        self._load_plugins()
+        self.raise_signal("started")
 
-    def getPluginsList(self):
-        """Gets plugins list from plugins.list if present, otherwise
-        calls getDefaultPluginsList"""
-        pluginsListFile = join(SOURCE_DIR, "plugins.list")
-        if not isfile(pluginsListFile):
-            warnings.warn("plugins.list not found, loading default values",
-                          Warning)
-            self.pluginsList = self.getDefaultPluginsList()
-        else:
-            with open(pluginsListFile) as f:
-                # comprehension ignores empty lines
-                self.pluginsList = [p for p in f.read().splitlines() if p]
-
-    def getDefaultPluginsList(self):
-        """Returns default list of plugins. Called if getPluginsList fails."""
-        return ["settings", "guiManager", "dirTree"]
-
-    def loadPlugins(self):
+    def _load_plugins(self):
         """Imports modules containing the plug-ins."""
         self.plugins = []
         self.pluginNames = {}
@@ -74,7 +57,7 @@ class PluginManager:
         pluginsPackage = importlib.import_module("plugin")
         for _, pluginName, __ in pkgutil.iter_modules(pluginsPackage.__path__):
             module = importlib.import_module("plugin.{}".format(pluginName))
-            newPlugin = module.createPlugin(self)
+            newPlugin = module.create_plugin(self)
             newPlugin.id = pluginId
             pluginId += 1
             self.plugins.append(newPlugin)
@@ -84,22 +67,23 @@ class PluginManager:
             warnings.warn("Failed to load plug-in %s" %
                           pluginName, Warning)
 
-    def raiseSignal(self, signal, *args, **kwargs):
+    def raise_signal(self, signal, *args, **kwargs):
         """Raises signal with given args."""
-        raiseTo = self.getPluginsToRaiseSignal(signal)
+        raiseTo = self._get_plugins_to_raise_signal(signal)
         for target in raiseTo:
             target.responses[signal](signal, *args, **kwargs)
 
-    def getPluginsToRaiseSignal(self, signal):
+    def _get_plugins_to_raise_signal(self, signal):
         """Returns a list of plug-ins in the order they can respond
         to signal."""
         result = []  # TODO check if it is possible
-        # O(n*m) get plugins that respond to signal
+        # Get plugins that respond to signal
         candidates = [c for c in self.plugins if signal in c.responses.keys()]
-        n = len(self.plugins)
-        # O(n^2) create a nxm matrix for faster comprasion,
+        numberOfPlugins = len(self.plugins)
+        # O(numberOfPlugins^2) create a nxm matrix for faster comprasion,
         # compMap[i][j] == True means plugins with id i responds after j
-        compMap = [[False for i in range(n)] for j in range(n)]
+        compMap = [[False for i in range(numberOfPlugins)] 
+                for j in range(numberOfPlugins)]
         for c1 in candidates:
             for earlyPluginName in c1.respondAfter[signal]:
                 earlyPlugin = self.pluginNames[earlyPluginName]
@@ -107,19 +91,18 @@ class PluginManager:
             for latePluginName in c1.respondBefore[signal]:
                 latePlugin = self.pluginNames[latePluginName]
                 compMap[latePlugin.id][c1.id] = True
-        # O(n) Clear respondAfter and respondBefore to merge both using
-        # compMap
+        #Clear respondAfter and respondBefore before merging them.
         for candidate in candidates:
             candidate.responded = False
             candidate.respondAfter[signal] = []
             candidate.respondBefore[signal] = []
-        # O(n^2) recreate respondAfter
-        for i in range(n):
-            for j in range(n):
+        #recreate respondAfter
+        for i in range(numberOfPlugins):
+            for j in range(numberOfPlugins):
                 if compMap[i][j]:
                     name = self.plugins[j].pname
                     self.plugins[i].respondAfter[signal].append(name)
-        # o (n^2) create plugins list in order they respond
+        #create plugins list in order they respond
         i = 0
         while i < len(candidates):
             plugin = candidates[i]
