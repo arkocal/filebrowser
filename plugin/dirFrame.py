@@ -157,22 +157,27 @@ class FileWidget(Gtk.Box):
         self.path = path
         (_, self.fname) = os.path.split(path)
         self.label = Gtk.Label(self.fname)
-        self.label.set_ellipsize(Pango.EllipsizeMode.END)
-        self.label.set_single_line_mode(False)
-        self.label.set_line_wrap(True)
-        # This somehow makes ellipsize work
-        self.label.set_max_width_chars(1)
+        self.label.set_ellipsize(Pango.EllipsizeMode.END)        
         self.label.set_margin_left(margin)
         self.label.set_margin_right(margin)
         if showPixbuf:
+            self.label.set_lines(3)        
+            self.label.set_single_line_mode(False)
+            self.label.set_line_wrap(True)
+            self.label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)        
+            self.label.set_justify(Gtk.Justification.CENTER)        
             thumbnail = getThumbnail(self.path, size)
             self.image = Gtk.Image()
             if thumbnail is not None:
                 self.image.set_from_pixbuf(thumbnail)
-            self.pack_start(self.image, True, True, 5)
+                height = thumbnail.get_height()
+            self.pack_start(self.image, False, False, 5 + (size-height)/2)
         else:
             self.label.set_alignment(0, 0.5)
-        self.pack_start(self.label, False, False, 5)
+        if showPixbuf:
+            self.pack_start(self.label, False, False, 5)
+        else:
+            self.pack_start(self.label, False, False, 5)
 
 
 class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
