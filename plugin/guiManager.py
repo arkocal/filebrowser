@@ -73,6 +73,7 @@ class guiManager(plugins.Plugin):
        request-remove-center: onCenterRemoveRequest
        request-remove-header: onHeaderRemoveRequest
        request_scroll: onScrollRequest
+       request_window: onRequestWindow
        """
 
     def __init__(self, manager):
@@ -91,6 +92,7 @@ class guiManager(plugins.Plugin):
                           self.onHeaderRemoveRequest)
         self.add_response("request-scroll", self.onScrollRequest)
         self.add_response("change-dir", self.onChangeDir)
+        self.add_response("request_window", self.onRequestWindow)
         self.respondAfter["started"].append("settings")
 
     def onStart(self, signal, *args, **kwargs):
@@ -232,6 +234,10 @@ class guiManager(plugins.Plugin):
             if "offset" in kwargs:
                 y += kwargs["offset"]
         self.leftPane.get_vadjustment().set_value(y)
+
+    def onRequestWindow(self, signal, *args, **kwargs):
+        """Return main window"""
+        return self.window
 
     def quit(self, window=None, event=None):
         size = window.get_size()
