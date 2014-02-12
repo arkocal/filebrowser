@@ -72,8 +72,9 @@ class guiManager(plugins.Plugin):
        request-remove-left-pane: onLeftPaneRemoveRequest
        request-remove-center: onCenterRemoveRequest
        request-remove-header: onHeaderRemoveRequest
-       request_scroll: onScrollRequest
-       request_window: onRequestWindow
+       request-scroll: onScrollRequest
+       request-window: onRequestWindow
+       error: on_error
        """
 
     def __init__(self, manager):
@@ -92,7 +93,8 @@ class guiManager(plugins.Plugin):
                           self.onHeaderRemoveRequest)
         self.add_response("request-scroll", self.onScrollRequest)
         self.add_response("change-dir", self.onChangeDir)
-        self.add_response("request_window", self.onRequestWindow)
+        self.add_response("request-window", self.onRequestWindow)
+        self.add_response("error", self.on_error)
         self.respondAfter["started"].append("settings")
 
     def onStart(self, signal, *args, **kwargs):
@@ -238,6 +240,33 @@ class guiManager(plugins.Plugin):
     def onRequestWindow(self, signal, *args, **kwargs):
         """Return main window"""
         return self.window
+
+    def on_error(self, signal, *args, **kwargs):
+        """Create Error Dialog
+        
+        Kwargs:
+            createDialog -- should be set to True if you want to show
+            a dialog. Otherwise this function does nothing.
+            errorCode -- used as title if no title argument is specified.
+            title -- title of dialog. errorCode is used if not present.
+            text -- (optional) explanation of the error.
+            
+        """
+        createDialog = False
+        if "createDialog" in kwargs:
+            createDialog = kwargs["createDialog"]
+        if not createDialog:
+            return
+        if "title" in kwargs:
+            title = kwargs["title"]
+        else:
+            title = kwargs["errorCode"]
+        dialog = Gtk.MessageDialog(self.window, 0, Gtk.MessageType.ERROR,
+            Gtk.ButtonsType.OK, title)
+        if "text" in kwargs:
+            dialog.format_secondary_text(kwargs["text"])
+        dialog.run()     
+        dialog.destroy()        
 
     def quit(self, window=None, event=None):
         size = window.get_size()

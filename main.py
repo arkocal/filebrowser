@@ -25,7 +25,7 @@ class FileBrowserApplication(Gtk.Application):
 
     def on_activate(self, app):       
         window = self.pluginManager.raise_signal(
-            "request_window")["guiManager"]
+            "request-window")["guiManager"]
         parser = FileBrowserOptionParser()
         (options, args) = parser.parse_args()
         for arg in args:

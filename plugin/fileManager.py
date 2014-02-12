@@ -9,13 +9,13 @@ class FileManager(plugins.Plugin):
     def __init__(self, manager):
         plugins.Plugin.__init__(self, manager)
         self.pname = "fileManager"
-        self.add_response("started", self.onStart)
-        self.add_response("file-activated", self.onFileActivated)
+        self.add_response("started", self.on_start)
+        self.add_response("file-activated", self.on_file_activated)
 
-    def onStart(self, signal, *args, **kwargs):
+    def on_start(self, signal, *args, **kwargs):
         self.system = platform.system()
 
-    def onFileActivated(self, signal, *args, **kwargs):
+    def on_file_activated(self, signal, *args, **kwargs):
         files = kwargs["files"]
         systemOpen = {
             "Linux": "xdg-open", "Windows": "open", "Darwin": "start"}
@@ -26,6 +26,9 @@ class FileManager(plugins.Plugin):
         for f in files:
             os.system('{} "{}"'.format(app, f))
 
+    def on_file_rename(self, signal, *args, **kwargs):
+        files = kwargs["files"]
+        newName = kwargs["new_name"]
 
 def create_plugin(manager):
     return FileManager(manager)
