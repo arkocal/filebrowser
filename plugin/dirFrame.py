@@ -429,6 +429,10 @@ class DirGrid(FlexibleGrid):
             if newName is not None:
                 self.manager.raise_signal("file-rename", newName=newName,
                                          files=[f.path for f in self.selected])
+            if len(self.selected) == 1:
+                self.selected[0].path = newName
+                _, fname = os.path.split(newName)
+                self.selected[0].label.set_text(fname)
 
 class DirFrame(plugins.Plugin):
 
@@ -561,6 +565,13 @@ class DirFrame(plugins.Plugin):
             nextGrid = self.grids[index - 1]
             nextGrid.grab_focus()
             grid.deselect_all()
+            while not nextGrid.ordered_children:
+                index -= 1
+                if index == 0:
+                    return
+                nextGrid = self.grids[index]
+                nextGrid.grab_focus()
+                grid.deselect_all()            
             nextGrid.selected = [nextGrid.ordered_children[-1]]
             nextGrid.update_selection([])
             nextGrid.cursor_at = len(nextGrid.ordered_children) - 1

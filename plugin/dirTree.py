@@ -84,7 +84,7 @@ class DirRow(Gtk.ListBoxRow):
 
     """ListBoxRow for showing directories and toggling children on and off"""
 
-    def __init__(self, path, plugin, depth):
+    def __init__(self, path, plugin, depth, parentRow):
         """Creates DirRowObject
         Args
             path: Full path to directory DirRow shows.
@@ -99,6 +99,7 @@ class DirRow(Gtk.ListBoxRow):
         self.plugin = plugin
         self.path = path
         self.depth = depth
+        self.parentRow = parentRow
         (_, self.display) = os.path.split(path)
         self.display = self.depth * "  " + self.display
         if "dir-row-height" not in self.plugin.settings.keys():
@@ -184,10 +185,22 @@ class DirRow(Gtk.ListBoxRow):
             dirs = filter(lambda f: not isHidden(f), dirs)
         for path in dirs:
             row = DirRow(path=os.path.join(self.path, path),
-                         plugin=self.plugin, depth=self.depth + 1)
+                 plugin=self.plugin, depth=self.depth+1, parentRow=self)
             self.children.append(row)
         self.isPopulated = True
 
+    def repopulate(self):
+        """Update rows children"""
+        #TODO optimize
+        print("Repopulating")
+        self.isPopulated = False
+        listbox = self.get_parent()
+        for child in self.children:
+            listbox.remove(child)
+        self.children = []
+        self.populate()
+        self.toggleOn()
+        listbox.show_all()
 
 class DirTree(plugins.Plugin):
 
@@ -227,7 +240,7 @@ class DirTree(plugins.Plugin):
                                       setting=settings.BooleanSetting())
         startpath = self.settings["start-path"].value
         self.root = startpath
-        row = DirRow(path=self.root, plugin=self, depth=0)
+        row = DirRow(path=self.root, plugin=self, depth=0, parentRow=None)
         self.widget.add(row)
         row.toggle()
         self.widget.show_all()
@@ -300,6 +313,7 @@ class DirTree(plugins.Plugin):
         if targetRow.path == newPath:
             targetRow.select()
             self.selectedRow = targetRow
+            self._scroll_to_row(targetRow)
 
     def select(self, row):
         """Selects row and deselects the old one."""
@@ -319,6 +333,16 @@ class DirTree(plugins.Plugin):
         if newName is not None:
             self.manager.raise_signal("file-rename", newName=newName,
                                      files=[row.path])
+            #we select parentRow because selected row is going to be removed
+            #during repopulate and cause a SegFault.
+            parentRow = row.parentRow
+            self.widget.select_row(parentRow)                        
+            parentRow.repopulate()
+            #reselect row
+            for row in parentRow.children:
+                if os.path.split(row.path)[1] == newName:
+                    self.widget.select_row(row)
+                    break
 
     def _scroll_to_row(self, row):
         gtk_update()
