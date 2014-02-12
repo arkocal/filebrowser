@@ -375,6 +375,7 @@ class DirGrid(FlexibleGrid):
         return True
 
     def change_dir(self, new_path):
+        self.selected = []
         self.path = new_path
         showHidden = self.settings["show-hidden"].value
         thumbnail_size = self.settings["thumbnail-size"].value
@@ -397,7 +398,6 @@ class DirGrid(FlexibleGrid):
                 self.add(w)
                 self.show_all()
                 gtk_update()
-        self.grab_focus()
 
     def on_key_press_event(self, widget, event):
         oldSelection = self.selected[:]
@@ -411,12 +411,24 @@ class DirGrid(FlexibleGrid):
         elif Gdk.keyval_name(event.keyval) == "BackSpace":
             self.manager.raise_signal("load-prev-dir")
         elif Gdk.keyval_name(event.keyval) == "F2":
-            if self.selected:
-                a = self.manager.raise_signal("request-create-entry-dialog",
-                                          title="Renaming", text="New name:")
-                print (a["guiManager"])
+            self.rename_files()
         return True
 
+    def rename_files(self):
+        if self.selected:
+            if len(self.selected) > 1:
+                entryText = ""
+                title = "Renaming multiple files"
+            else:
+                entryText = os.path.split(self.selected[0].path)[1]        
+                title = """Renaming file "{}" """.format(entryText)
+            newName = self.manager.raise_signal("request-create-entry-dialog",
+                title=title,
+                text="New name:",
+                entryText=entryText)["guiManager"]
+            if newName is not None:
+                self.manager.raise_signal("file-rename", newName=newName,
+                                         files=[f.path for f in self.selected])
 
 class DirFrame(plugins.Plugin):
 

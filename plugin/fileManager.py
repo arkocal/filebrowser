@@ -29,12 +29,13 @@ class FileManager(plugins.Plugin):
 
     def on_file_rename(self, signal, *args, **kwargs):
         files = kwargs["files"]
-        newName = kwargs["new_name"]
+        newName = kwargs["newName"]
         if len(files) == 1:
+            newName = os.path.join(os.path.split(files[0])[0] , newName)
             os.rename(files[0], newName)
         else:
             for i, file_ in enumerate(files):
-                pass        
+                pass 
 
 def create_plugin(manager):
     return FileManager(manager)

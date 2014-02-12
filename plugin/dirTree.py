@@ -261,6 +261,8 @@ class DirTree(plugins.Plugin):
                 self._scroll_to_row(row)
         elif keyname == "BackSpace":
             self.manager.raise_signal("load-prev-dir")
+        elif keyname == "F2":
+            self.rename()
 
     def onChangeDir(self, signal, *args, **kwargs):
         """Selects kwargs["newPath"] if it is in dirTree."""
@@ -306,6 +308,17 @@ class DirTree(plugins.Plugin):
         self.selectedRow = row
         row.select()
         self.manager.raise_signal("change-dir", newPath=row.path)
+
+    def rename(self):
+        row = self.widget.get_selected_row()
+        entryText = os.path.split(row.path)[1]        
+        newName = self.manager.raise_signal("request-create-entry-dialog",
+            title="""Renaming folder "{}" """.format(entryText),
+            text="New name:",
+            entryText=entryText)["guiManager"]
+        if newName is not None:
+            self.manager.raise_signal("file-rename", newName=newName,
+                                     files=[row.path])
 
     def _scroll_to_row(self, row):
         gtk_update()

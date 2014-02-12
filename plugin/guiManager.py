@@ -37,6 +37,7 @@ class EntryDialog(Gtk.Dialog):
         vbox1.pack_end(cancelButton, False, False, 5)
         box.pack_start(vbox1, False, False, 0)
         self.connect("key-press-event", self.on_key_press_event)
+        self.set_size_request(400, -1)
         self.show_all()
 
     def cancel(self, button):
@@ -285,7 +286,7 @@ class guiManager(plugins.Plugin):
         title = kwargs["title"]
         text = kwargs["text"]
         if "entryText" in kwargs:   
-            entryText = kwargs[entryText]
+            entryText = kwargs["entryText"]
         else:
             entryText = ""
         d = EntryDialog(title, self.window, text, entryText, self)
