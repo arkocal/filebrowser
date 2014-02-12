@@ -15,6 +15,42 @@ import plugin.settings as settings
 import plugins
 
 
+class EntryDialog(Gtk.Dialog):
+
+    def __init__(self, title, parent, text, entryText, guiManager):
+        Gtk.Dialog.__init__(self, title, parent)
+        self.guiManager = guiManager
+        box = self.get_content_area()
+        vbox0 = Gtk.Box()
+        label = Gtk.Label(text)
+        self.entry = Gtk.Entry()
+        self.entry.set_text(entryText)
+        vbox0.pack_start(label, False, False, 5)
+        vbox0.pack_start(self.entry, True, True, 0)
+        box.pack_start(vbox0, False, False, 5)
+        vbox1 = Gtk.Box()
+        cancelButton = Gtk.Button.new_from_stock(Gtk.STOCK_CANCEL)
+        cancelButton.connect("clicked", self.cancel)
+        okButton = Gtk.Button.new_from_stock(Gtk.STOCK_OK)
+        okButton.connect("clicked", self.ok)
+        vbox1.pack_end(okButton, False, False, 0)
+        vbox1.pack_end(cancelButton, False, False, 5)
+        box.pack_start(vbox1, False, False, 0)
+        self.connect("key-press-event", self.on_key_press_event)
+        self.show_all()
+
+    def cancel(self, button):
+        self.destroy()
+    
+    def ok(self, button=None):
+        self.guiManager.dialogInput = self.entry.get_text()
+        self.destroy()
+        
+    def on_key_press_event(self, widget, event):
+        keyname = Gdk.keyval_name(event.keyval)
+        if keyname == "Return" and self.entry.has_focus():
+            self.ok()
+
 class LeftPaneWidthSetting(settings.Setting):
 
     """Setting for left pane width."""
@@ -74,6 +110,7 @@ class guiManager(plugins.Plugin):
        request-remove-header: onHeaderRemoveRequest
        request-scroll: onScrollRequest
        request-window: onRequestWindow
+       request-create-entry-dialog: on_request_entry_dialog
        error: on_error
        """
 
@@ -94,8 +131,11 @@ class guiManager(plugins.Plugin):
         self.add_response("request-scroll", self.onScrollRequest)
         self.add_response("change-dir", self.onChangeDir)
         self.add_response("request-window", self.onRequestWindow)
+        self.add_response("request-create-entry-dialog", 
+                          self.on_request_entry_dialog)
         self.add_response("error", self.on_error)
         self.respondAfter["started"].append("settings")
+        self.dialogInput = None
 
     def onStart(self, signal, *args, **kwargs):
         """Creates the gui"""
@@ -240,6 +280,20 @@ class guiManager(plugins.Plugin):
     def onRequestWindow(self, signal, *args, **kwargs):
         """Return main window"""
         return self.window
+
+    def on_request_entry_dialog(self, signal, *args, **kwargs):
+        title = kwargs["title"]
+        text = kwargs["text"]
+        if "entryText" in kwargs:   
+            entryText = kwargs[entryText]
+        else:
+            entryText = ""
+        d = EntryDialog(title, self.window, text, entryText, self)
+        d.run()
+        d.destroy()
+        temp = self.dialogInput
+        self.dialogInput = None
+        return temp
 
     def on_error(self, signal, *args, **kwargs):
         """Create Error Dialog

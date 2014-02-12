@@ -410,6 +410,11 @@ class DirGrid(FlexibleGrid):
                                       files=[f.path for f in self.selected])
         elif Gdk.keyval_name(event.keyval) == "BackSpace":
             self.manager.raise_signal("load-prev-dir")
+        elif Gdk.keyval_name(event.keyval) == "F2":
+            if self.selected:
+                a = self.manager.raise_signal("request-create-entry-dialog",
+                                          title="Renaming", text="New name:")
+                print (a["guiManager"])
         return True
 
 

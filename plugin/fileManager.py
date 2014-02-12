@@ -11,6 +11,7 @@ class FileManager(plugins.Plugin):
         self.pname = "fileManager"
         self.add_response("started", self.on_start)
         self.add_response("file-activated", self.on_file_activated)
+        self.add_response("file-rename", self.on_file_rename)
 
     def on_start(self, signal, *args, **kwargs):
         self.system = platform.system()
@@ -29,6 +30,11 @@ class FileManager(plugins.Plugin):
     def on_file_rename(self, signal, *args, **kwargs):
         files = kwargs["files"]
         newName = kwargs["new_name"]
+        if len(files) == 1:
+            os.rename(files[0], newName)
+        else:
+            for i, file_ in enumerate(files):
+                pass        
 
 def create_plugin(manager):
     return FileManager(manager)
