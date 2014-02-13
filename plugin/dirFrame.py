@@ -361,6 +361,7 @@ class DirGrid(FlexibleGrid):
         self.path = None
         self.showPixbuf = showPixbuf
         self.set_can_focus(True)
+        self.modify_bg(0, Gdk.Color.parse("#f5f5f5")[1])
 
     def on_button_press_event(self, widget, event):
         oldSelection = self.selected[:]
@@ -542,7 +543,7 @@ class DirFrame(plugins.Plugin):
         grid = DirGrid(self, 300, False)
         grid.change_dir(subdir)
         grid.set_column_spacing(self.spacing * 2)
-        grid.set_border_width(self.spacing)
+        #grid.set_border_width(self.spacing)
         grid.set_margin_top(-self.spacing / 2)
         grid.set_can_focus(True)
         self.holder.add(grid)
