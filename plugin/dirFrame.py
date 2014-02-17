@@ -361,7 +361,7 @@ class DirGrid(FlexibleGrid):
         self.path = None
         self.showPixbuf = showPixbuf
         self.set_can_focus(True)
-        self.modify_bg(0, Gdk.Color.parse("#f5f5f5")[1])
+        self.modify_bg(0, Gdk.Color.parse("#fafafa")[1])
 
     def on_button_press_event(self, widget, event):
         oldSelection = self.selected[:]
@@ -469,7 +469,9 @@ class DirFrame(plugins.Plugin):
         never = Gtk.PolicyType.NEVER
         self.scroll = Gtk.ScrolledWindow(hscrollbar_policy=never)
         self.holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.holder.modify_bg(0, Gdk.Color.parse("#fafafa")[1])
         self.titleBox = Gtk.Box()
+        self.titleBox.modify_bg(0, Gdk.Color.parse("#f3f3f3")[1])
         self.mainDirTitle = Gtk.Label()
         self.mainDirTitle.set_margin_left(self.spacing)
         self.mainDirTitle.set_margin_top(20)
@@ -533,10 +535,14 @@ class DirFrame(plugins.Plugin):
         label.set_margin_left(self.spacing)
         label.set_alignment(0, 1)
         separator = Gtk.HSeparator()
-        self.subdirWidgets.append(label)
-        self.subdirWidgets.append(separator)
-        self.holder.add(label)
-        self.holder.add(separator)
+#        self.subdirWidgets.append(label)
+#        self.subdirWidgets.append(separator)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.add(label)
+        box.add(separator)
+        box.modify_bg(0, Gdk.Color.parse("#f3f3f3")[1])        
+        self.subdirWidgets.append(box)        
+        self.holder.add(box)
 
     def addSubdirContent(self, subdir):
         # TODO make settings
