@@ -5,6 +5,7 @@ import hashlib
 import urllib
 import re
 from mimetypes import guess_type
+import time
 
 from gi.repository import Gtk, Gdk, GObject, Pango, GdkPixbuf
 from gi.repository.GdkPixbuf import Pixbuf
@@ -142,7 +143,7 @@ class ThumbnailSizeSetting(settings.Setting):
 
     def setToDefault(self):
         """Sets thumbnail size to the default value."""
-        self.set(128)
+        self.set(156)
 
 
 class FileWidget(Gtk.Box):
@@ -224,7 +225,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
         Gtk.Grid.draw. This doesn't work right if there is a children
         with a width greater than self.column_width."""
         width = self.get_allocated_width()
-        columns = int(width / self.column_width)
+        columns = int(width / (self.column_width + self.get_column_spacing()))
         if columns != self.columns:
         # Reorder if number of columns has changed.
             self.columns = columns
@@ -354,7 +355,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
 class DirGrid(FlexibleGrid):
 
     def __init__(self, plugin, columnWidth=100, showPixbuf=True):
-        FlexibleGrid.__init__(self, columnWidth)
+        FlexibleGrid.__init__(self, columnWidth)       
         self.plugin = plugin
         self.settings = plugin.settings
         self.manager = plugin.manager
@@ -449,9 +450,8 @@ class DirFrame(plugins.Plugin):
         self.dependencies.append("guiManager")
         self.dependencies.append("settings")
         self.add_response("started", self.onStart)
-       # self.add_response("file-select", self.onFileSelect)
-       # self.add_response("file-activate", self.onFileActivate)
         self.add_response("change-dir", self.onChangeDir)
+        self.add_response("zoom", self.on_zoom)
         self.respondBefore["started"].append("dirTree")
         self.respondAfter["started"].append("guiManager")
         self.respondAfter["started"].append("settings")
@@ -466,6 +466,8 @@ class DirFrame(plugins.Plugin):
         self.thumbnailSize = self.settings["thumbnail-size"].value
         self.spacing = 30
         self.path = None
+        self.zooming = False
+        self.subdirWidgets = []        
         never = Gtk.PolicyType.NEVER
         self.scroll = Gtk.ScrolledWindow(hscrollbar_policy=never)
         self.holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -486,9 +488,9 @@ class DirFrame(plugins.Plugin):
         self.holder.add(separator)
         self.holder.add(self.grid)
         self.scroll.add(self.holder)
+        self.scroll.connect("scroll-child", test)
         self.manager.raise_signal("request-place-center", widget=self.scroll)
         self.grid.show()
-        self.subdirWidgets = []
 
     def onChangeDir(self, signal, *args, **kwargs):
         showHidden = self.settings["show-hidden"].value
@@ -504,15 +506,18 @@ class DirFrame(plugins.Plugin):
         self.selected = []
         for subdirWidget in self.subdirWidgets:
             self.holder.remove(subdirWidget)
-        spinner = Gtk.Spinner(active=True)
-        self.titleBox.pack_end(spinner, False, False, 20)
+        try:
+            self.titleBox.remove(self.spinner)
+        except AttributeError:
+            pass
+        self.spinner = Gtk.Spinner(active=True)
+        self.titleBox.pack_end(self.spinner, False, False, 20)
         self.titleBox.show_all()
         gtk_update()
         self.grid.change_dir(newPath)
         if self.path != newPath:
         # This means directory has been changed while loading this one
         # and operation should be cancelled.
-            self.titleBox.remove(spinner)
             return
         self.grids = [self.grid]
         self.subdirWidgets = []
@@ -526,8 +531,27 @@ class DirFrame(plugins.Plugin):
             self.addSubdirTitle(subdir)
             self.addSubdirContent(subdir)
         self.holder.show_all()
-        self.titleBox.remove(spinner)
+        self.titleBox.remove(self.spinner)
 
+    def on_zoom(self, signal, *args, **kwargs):
+        if self.zooming: #zoom events shouldn't overlap
+            return
+        self.zooming = True
+        direction = kwargs["direction"]
+        if direction == "up":
+            size = self.settings["thumbnail-size"].value * 7/6
+        else:
+            size = self.settings["thumbnail-size"].value * 6/7
+        if 80 < size < 500:
+            print ("Valid")
+            self.manager.raise_signal("set-setting", setting="thumbnail-size",
+                                      newValue = int(size))
+            self.grid.column_width = int(size)
+            self.grid.columns = int(self.grid.get_allocated_width() / (self.grid.column_width + self.grid.get_column_spacing()) )
+            print(self.grid.columns, " columns of width ", self.grid.column_width)
+            self.grid.change_dir(self.grid.path)
+        self.zooming = False
+            
     def addSubdirTitle(self, subdir):
         label = Gtk.Label()
         (_, subdir) = os.path.split(subdir)
@@ -543,6 +567,8 @@ class DirFrame(plugins.Plugin):
         box.modify_bg(0, Gdk.Color.parse("#f3f3f3")[1])        
         self.subdirWidgets.append(box)        
         self.holder.add(box)
+        self.holder.show_all()
+        gtk_update()
 
     def addSubdirContent(self, subdir):
         # TODO make settings
@@ -591,3 +617,6 @@ class DirFrame(plugins.Plugin):
 
 def create_plugin(manager):
     return DirFrame(manager)
+    
+def test(e=None, b=None):
+    print("Test ", e, b)

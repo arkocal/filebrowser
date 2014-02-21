@@ -30,6 +30,11 @@ class FileManager(plugins.Plugin):
     def on_file_rename(self, signal, *args, **kwargs):
         files = kwargs["files"]
         newName = kwargs["newName"]
+        if "/" in newName:
+            self.manager.raise_signal("error", errorCode="INVALID_FILENAME",
+                                      createDialog=True, 
+                                      title="Invalid file name",
+                                      text="File names can not contain '/'")
         if len(files) == 1:
             newName = os.path.join(os.path.split(files[0])[0] , newName)
             os.rename(files[0], newName)

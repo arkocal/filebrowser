@@ -52,6 +52,7 @@ class EntryDialog(Gtk.Dialog):
         if keyname == "Return" and self.entry.has_focus():
             self.ok()
 
+
 class LeftPaneWidthSetting(settings.Setting):
 
     """Setting for left pane width."""
@@ -171,6 +172,8 @@ class guiManager(plugins.Plugin):
         self.window.resize(windowWidth, windowHeight)
         self.window.move(windowPosX, windowPosY)
         self.window.connect("delete-event", self.quit)
+        self.window.connect("scroll-event", self.on_scroll_event)
+        self.window.add_events(Gdk.EventMask.SCROLL_MASK)
         self.window.add_events(Gdk.EventMask.KEY_PRESS_MASK)
         self.window.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
 
@@ -322,6 +325,18 @@ class guiManager(plugins.Plugin):
             dialog.format_secondary_text(kwargs["text"])
         dialog.run()     
         dialog.destroy()        
+
+    def on_scroll_event(self, widget, event):
+        modifiers = Gtk.accelerator_get_default_mod_mask()
+        ctrl = event.state & modifiers == Gdk.ModifierType.CONTROL_MASK
+        if ctrl:
+            scrollD = event.get_scroll_direction()
+            if scrollD[1] == Gdk.ScrollDirection.UP:
+                direction = "up"
+            else:
+                direction = "down"
+            self.manager.raise_signal("zoom", direction=direction)
+            return True
 
     def quit(self, window=None, event=None):
         size = window.get_size()
