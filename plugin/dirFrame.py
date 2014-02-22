@@ -366,15 +366,44 @@ class DirGrid(FlexibleGrid):
 
     def on_button_press_event(self, widget, event):
         oldSelection = self.selected[:]
-        if event.type == Gdk.EventType.BUTTON_PRESS:
-            FlexibleGrid.on_button_press_event(self, widget, event)
-            if self.selected[:] != oldSelection:
-                self.manager.raise_signal("file-selected",
-                                          files=[f.path for f in self.selected])
-        elif event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
-            self.manager.raise_signal("file-activated",
-                                      files=[f.path for f in self.selected])
+        print ("Event button:", event.button)
+        if event.button in [1,3]: #left or right button
+            if event.type == Gdk.EventType.BUTTON_PRESS:
+                FlexibleGrid.on_button_press_event(self, widget, event)
+                if self.selected[:] != oldSelection:
+                    self.manager.raise_signal("file-selected",
+                                              files=[f.path for f 
+                                                     in self.selected])
+            elif event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
+                self.open_files()
+                
+        if event.button == 3: #right button
+            print ("R")
+            self.create_right_click_menu(event)
+            self.show_right_click_menu(event)
         return True
+
+    def create_right_click_menu(self, event):
+        self.menu = Gtk.Menu()
+        self._add_file_ops_to_right_click_menu()
+        self.manager.raise_signal("create-right-click-menu", 
+                                  files=[f.path for f in self.selected])
+        self.menu.show_all()
+
+    def _add_file_ops_to_right_click_menu(self):
+        openItem = Gtk.MenuItem("Open")
+        renameItem = Gtk.MenuItem("Rename")
+        
+        openItem.connect("activate", self.open_files)
+        renameItem.connect("activate", self.rename_files)
+
+        self.menu.append(openItem)
+        self.menu.append(Gtk.SeparatorMenuItem())        
+        self.menu.append(renameItem)
+        
+    def show_right_click_menu(self, event):
+        self.menu.popup(None, None, None, None, 0, 
+                        Gtk.get_current_event_time())
 
     def change_dir(self, new_path):
         self.selected = []
@@ -408,15 +437,18 @@ class DirGrid(FlexibleGrid):
             self.manager.raise_signal("file-selected",
                                       files=[f.path for f in self.selected])
         if Gdk.keyval_name(event.keyval) == "Return":
-            self.manager.raise_signal("file-activated",
-                                      files=[f.path for f in self.selected])
+            self.open_files()
         elif Gdk.keyval_name(event.keyval) == "BackSpace":
             self.manager.raise_signal("load-prev-dir")
         elif Gdk.keyval_name(event.keyval) == "F2":
             self.rename_files()
         return True
 
-    def rename_files(self):
+    def open_files(self, *args):
+        self.manager.raise_signal("file-activated", 
+                                  files=[f.path for f in self.selected])
+
+    def rename_files(self, *args):
         if self.selected:
             if len(self.selected) > 1:
                 entryText = ""
