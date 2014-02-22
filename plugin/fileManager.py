@@ -30,17 +30,49 @@ class FileManager(plugins.Plugin):
     def on_file_rename(self, signal, *args, **kwargs):
         files = kwargs["files"]
         newName = kwargs["newName"]
+        newNamesGiven = []
         if "/" in newName:
             self.manager.raise_signal("error", errorCode="INVALID_FILENAME",
                                       createDialog=True, 
                                       title="Invalid file name",
                                       text="File names can not contain '/'")
         if len(files) == 1:
-            newName = os.path.join(os.path.split(files[0])[0] , newName)
-            os.rename(files[0], newName)
+            filePath, fileName = os.path.split(files[0])
+            filesInDir = os.listdir(filePath)
+            newPath = os.path.join(filePath , newName)
+            if newName in filesInDir:
+                self.manager.raise_signal("error", errorCode="USED_FILENAME",
+                                      createDialog=True, 
+                                      title="Invalid file name",
+                                      text="There is another file with the "
+                                           "name {} in the directory".format(
+                                                newName))
+                newNamesGiven.append(fileName)
+            else:
+                os.rename(files[0], newPath)
+                newNamesGiven.append(newName)
         else:
             for i, file_ in enumerate(files):
-                pass 
+                filePath, fileName = os.path.split(file_)
+                filesInDir = os.listdir(filePath)                
+                if len(fileName.split(".")) > 1:                
+                    ext = fileName.split(".")[-1]
+                else:
+                    ext = ""
+                newNameWithoutPath = newName + "-" + str(i+1) + "." + ext                    
+                n = os.path.join(filePath , newNameWithoutPath)
+                if newNameWithoutPath in filesInDir:   
+                    self.manager.raise_signal("error", errorCode="USED_FILENAME",
+                                          createDialog=True, 
+                                          title="Invalid file name",
+                                          text="There is another file with the "
+                                               "name {} in the directory".format(
+                                                    newName))
+                    newNamesGiven.append(fileName)                             
+                else:
+                    newNamesGiven.append(n)
+                    os.rename(file_, n)
+        return newNamesGiven
 
 def create_plugin(manager):
     return FileManager(manager)

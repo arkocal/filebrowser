@@ -461,12 +461,13 @@ class DirGrid(FlexibleGrid):
                 text="New name:",
                 entryText=entryText)["guiManager"]
             if newName is not None:
-                self.manager.raise_signal("file-rename", newName=newName,
-                                         files=[f.path for f in self.selected])
-            if len(self.selected) == 1:
-                self.selected[0].path = newName
+                newNames = self.manager.raise_signal("file-rename", 
+                    newName=newName, files=[f.path for f in self.selected])[
+                                                                "fileManager"]
+            for i, newName in enumerate(newNames):
+                self.selected[i].path = newName
                 _, fname = os.path.split(newName)
-                self.selected[0].label.set_text(fname)
+                self.selected[i].label.set_text(fname)
 
 class DirFrame(plugins.Plugin):
 
