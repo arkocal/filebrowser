@@ -364,7 +364,6 @@ class DirGrid(FlexibleGrid):
 
     def on_button_press_event(self, widget, event):
         oldSelection = self.selected[:]
-        print("Event button:", event.button)
         if event.button in [1, 3]:  # left or right button
             if event.type == Gdk.EventType.BUTTON_PRESS:
                 FlexibleGrid.on_button_press_event(self, widget, event)
@@ -376,12 +375,11 @@ class DirGrid(FlexibleGrid):
                 self.open_files()
 
         if event.button == 3:  # right button
-            print("R")
             self.create_right_click_menu(event)
             self.show_right_click_menu(event)
         return True
 
-    def create_right_click_menu(self, event):
+    def create_right_click_menu(self, *args):
         self.menu = Gtk.Menu()
         self._add_file_ops_to_right_click_menu()
         self.manager.raise_signal("create-right-click-menu",
@@ -402,7 +400,7 @@ class DirGrid(FlexibleGrid):
         self.menu.append(Gtk.SeparatorMenuItem())
         self.menu.append(renameItem)
 
-    def show_right_click_menu(self, event):
+    def show_right_click_menu(self, *args):
         self.menu.popup(None, None, None, None, 0,
                         Gtk.get_current_event_time())
 
@@ -436,6 +434,9 @@ class DirGrid(FlexibleGrid):
         if self.selected[:] != oldSelection:
             self.manager.raise_signal("file-selected",
                                       files=[f.path for f in self.selected])
+        if Gdk.keyval_name(event.keyval) == "Menu":
+            self.create_right_click_menu()
+            self.show_right_click_menu()
         if Gdk.keyval_name(event.keyval) == "Return":
             self.open_files()
         elif Gdk.keyval_name(event.keyval) == "BackSpace":
