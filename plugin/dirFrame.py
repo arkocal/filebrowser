@@ -7,7 +7,7 @@ import re
 from mimetypes import guess_type
 import time
 
-from gi.repository import Gtk, Gdk, GObject, Pango, GdkPixbuf
+from gi.repository import Gtk, Gdk, GObject, Pango, GdkPixbuf, Gio
 from gi.repository.GdkPixbuf import Pixbuf
 
 import plugin.settings as settings
@@ -137,7 +137,7 @@ class ThumbnailSizeSetting(settings.Setting):
     def _is_valid_value(self, value):
         """Returns whether value is a valid size."""
         try:
-            return (type(value) is int) and (0 < value < 60000)
+            return (isinstance(value, int)) and (0 < value < 60000)
         except:
             return False
 
@@ -260,8 +260,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
             self.selected = []
         if shift:
             if self.secondary_cursor_at is not None:
-                cursors = [self.secondary_cursor_at, self.cursor_at]
-                cursors.sort()
+                cursors = sorted([self.secondary_cursor_at, self.cursor_at])
                 smaller = cursors[0]
                 greater = cursors[1]
                 self.selected = self.ordered_children[smaller:greater + 1]
@@ -270,7 +269,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
                     self.secondary_cursor_at, self.cursor_at
         else:
             self.secondary_cursor_at = self.cursor_at
-        if ctrl:
+        if ctrl and event.button == 1: #Left button
             if widget in self.selected:
                 self.selected.remove(widget)
             else:
@@ -304,8 +303,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
             if (0 <= self.secondary_cursor_at + dif[keyname]
                     < len(self.ordered_children)):
                 self.secondary_cursor_at += dif[keyname]
-                cursors = [self.secondary_cursor_at, self.cursor_at]
-                cursors.sort()
+                cursors = sorted([self.secondary_cursor_at, self.cursor_at])
                 smaller = cursors[0]
                 greater = cursors[1]
                 self.selected = self.ordered_children[smaller:greater + 1]
@@ -355,7 +353,7 @@ class FlexibleGrid(Gtk.Grid, Gtk.EventBox):
 class DirGrid(FlexibleGrid):
 
     def __init__(self, plugin, columnWidth=100, showPixbuf=True):
-        FlexibleGrid.__init__(self, columnWidth)       
+        FlexibleGrid.__init__(self, columnWidth)
         self.plugin = plugin
         self.settings = plugin.settings
         self.manager = plugin.manager
@@ -366,19 +364,19 @@ class DirGrid(FlexibleGrid):
 
     def on_button_press_event(self, widget, event):
         oldSelection = self.selected[:]
-        print ("Event button:", event.button)
-        if event.button in [1,3]: #left or right button
+        print("Event button:", event.button)
+        if event.button in [1, 3]:  # left or right button
             if event.type == Gdk.EventType.BUTTON_PRESS:
                 FlexibleGrid.on_button_press_event(self, widget, event)
                 if self.selected[:] != oldSelection:
                     self.manager.raise_signal("file-selected",
-                                              files=[f.path for f 
+                                              files=[f.path for f
                                                      in self.selected])
             elif event.type == Gdk.EventType.DOUBLE_BUTTON_PRESS:
                 self.open_files()
-                
-        if event.button == 3: #right button
-            print ("R")
+
+        if event.button == 3:  # right button
+            print("R")
             self.create_right_click_menu(event)
             self.show_right_click_menu(event)
         return True
@@ -386,23 +384,26 @@ class DirGrid(FlexibleGrid):
     def create_right_click_menu(self, event):
         self.menu = Gtk.Menu()
         self._add_file_ops_to_right_click_menu()
-        self.manager.raise_signal("create-right-click-menu", 
+        self.manager.raise_signal("create-right-click-menu",
                                   files=[f.path for f in self.selected])
         self.menu.show_all()
 
     def _add_file_ops_to_right_click_menu(self):
         openItem = Gtk.MenuItem("Open")
+        openItem.connect("activate", self.open_files)        
+        openWithItem = Gtk.MenuItem("Open with")
+        openWithItem.connect("activate", self.open_files_with)            
         renameItem = Gtk.MenuItem("Rename")
-        
-        openItem.connect("activate", self.open_files)
         renameItem.connect("activate", self.rename_files)
 
         self.menu.append(openItem)
-        self.menu.append(Gtk.SeparatorMenuItem())        
+        if (len(self.selected) == 1):
+            self.menu.append(openWithItem)
+        self.menu.append(Gtk.SeparatorMenuItem())
         self.menu.append(renameItem)
-        
+
     def show_right_click_menu(self, event):
-        self.menu.popup(None, None, None, None, 0, 
+        self.menu.popup(None, None, None, None, 0,
                         Gtk.get_current_event_time())
 
     def change_dir(self, new_path):
@@ -417,8 +418,7 @@ class DirGrid(FlexibleGrid):
         if not showHidden:
             toShow = filter(lambda f: not isHidden(f), toShow)
         fullPaths = [os.path.join(new_path, f) for f in toShow]
-        files = list(filter(os.path.isfile, fullPaths))
-        files.sort()
+        files = sorted(filter(os.path.isfile, fullPaths))
         for chunk in chunks(files, 10):
             for f in chunk:
                 if self.path != new_path:
@@ -444,9 +444,20 @@ class DirGrid(FlexibleGrid):
             self.rename_files()
         return True
 
-    def open_files(self, *args):
-        self.manager.raise_signal("file-activated", 
-                                  files=[f.path for f in self.selected])
+    def open_files(self, *args, **kwargs):
+        self.manager.raise_signal("file-activated",
+                                  files=[f.path for f in self.selected],
+                                  **kwargs)
+
+    def open_files_with(self, *args):
+        dialog = Gtk.AppChooserDialog.new(
+            None, Gtk.DialogFlags.MODAL,
+            Gio.File.new_for_path(self.selected[0].path))
+        appChooserWidget = dialog.get_widget()
+        respond = dialog.run()
+        if respond != -6:  # Cancel
+            self.open_files(app=dialog.get_app_info().get_executable())
+        dialog.destroy()
 
     def rename_files(self, *args):
         if self.selected:
@@ -454,20 +465,23 @@ class DirGrid(FlexibleGrid):
                 entryText = ""
                 title = "Renaming multiple files"
             else:
-                entryText = os.path.split(self.selected[0].path)[1]        
+                entryText = os.path.split(self.selected[0].path)[1]
                 title = """Renaming file "{}" """.format(entryText)
-            newName = self.manager.raise_signal("request-create-entry-dialog",
-                title=title,
-                text="New name:",
-                entryText=entryText)["guiManager"]
+            request = self.manager.raise_signal("request-create-entry-dialog",
+                                                title=title,
+                                                text="New name:",
+                                                entryText=entryText)
+            newName = request["guiManager"]
             if newName is not None:
-                newNames = self.manager.raise_signal("file-rename", 
-                    newName=newName, files=[f.path for f in self.selected])[
-                                                                "fileManager"]
+                fls = [f.path for f in self.selected]
+                newNames = self.manager.raise_signal("file-rename",
+                                                     newName=newName,
+                                                     files=fls)["fileManager"]
             for i, newName in enumerate(newNames):
                 self.selected[i].path = newName
                 _, fname = os.path.split(newName)
                 self.selected[i].label.set_text(fname)
+
 
 class DirFrame(plugins.Plugin):
 
@@ -500,7 +514,7 @@ class DirFrame(plugins.Plugin):
         self.spacing = 30
         self.path = None
         self.zooming = False
-        self.subdirWidgets = []        
+        self.subdirWidgets = []
         never = Gtk.PolicyType.NEVER
         self.scroll = Gtk.ScrolledWindow(hscrollbar_policy=never)
         self.holder = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -558,8 +572,7 @@ class DirFrame(plugins.Plugin):
         if not showHidden:
             toShow = filter(lambda f: not isHidden(f), toShow)
         fullPaths = [os.path.join(newPath, f) for f in toShow]
-        subdirs = list(filter(os.path.isdir, fullPaths))
-        subdirs.sort()
+        subdirs = sorted(filter(os.path.isdir, fullPaths))
         for subdir in subdirs:
             self.addSubdirTitle(subdir)
             self.addSubdirContent(subdir)
@@ -567,24 +580,26 @@ class DirFrame(plugins.Plugin):
         self.titleBox.remove(self.spinner)
 
     def on_zoom(self, signal, *args, **kwargs):
-        if self.zooming: #zoom events shouldn't overlap
+        if self.zooming:  # zoom events shouldn't overlap
             return
         self.zooming = True
         direction = kwargs["direction"]
         if direction == "up":
-            size = self.settings["thumbnail-size"].value * 7/6
+            size = self.settings["thumbnail-size"].value * 7 / 6
         else:
-            size = self.settings["thumbnail-size"].value * 6/7
+            size = self.settings["thumbnail-size"].value * 6 / 7
         if 80 < size < 500:
-            print ("Valid")
+            print("Valid")
             self.manager.raise_signal("set-setting", setting="thumbnail-size",
-                                      newValue = int(size))
+                                      newValue=int(size))
             self.grid.column_width = int(size)
-            self.grid.columns = int(self.grid.get_allocated_width() / (self.grid.column_width + self.grid.get_column_spacing()) )
-            print(self.grid.columns, " columns of width ", self.grid.column_width)
+            self.grid.columns = int(self.grid.get_allocated_width() / (
+                self.grid.column_width + self.grid.get_column_spacing()))
+            print(self.grid.columns,
+                  " columns of width ", self.grid.column_width)
             self.grid.change_dir(self.grid.path)
         self.zooming = False
-            
+
     def addSubdirTitle(self, subdir):
         label = Gtk.Label()
         (_, subdir) = os.path.split(subdir)
@@ -597,8 +612,8 @@ class DirFrame(plugins.Plugin):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         box.add(label)
         box.add(separator)
-        box.modify_bg(0, Gdk.Color.parse("#f3f3f3")[1])        
-        self.subdirWidgets.append(box)        
+        box.modify_bg(0, Gdk.Color.parse("#f3f3f3")[1])
+        self.subdirWidgets.append(box)
         self.holder.add(box)
         self.holder.show_all()
         gtk_update()
@@ -608,7 +623,7 @@ class DirFrame(plugins.Plugin):
         grid = DirGrid(self, 300, False)
         grid.change_dir(subdir)
         grid.set_column_spacing(self.spacing * 2)
-        #grid.set_border_width(self.spacing)
+        # grid.set_border_width(self.spacing)
         grid.set_margin_top(-self.spacing / 2)
         grid.set_can_focus(True)
         self.holder.add(grid)
@@ -637,7 +652,7 @@ class DirFrame(plugins.Plugin):
                     return
                 nextGrid = self.grids[index]
                 nextGrid.grab_focus()
-                grid.deselect_all()            
+                grid.deselect_all()
             nextGrid.selected = [nextGrid.ordered_children[-1]]
             nextGrid.update_selection([])
             nextGrid.cursor_at = len(nextGrid.ordered_children) - 1
@@ -650,6 +665,7 @@ class DirFrame(plugins.Plugin):
 
 def create_plugin(manager):
     return DirFrame(manager)
-    
+
+
 def test(e=None, b=None):
     print("Test ", e, b)
